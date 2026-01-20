@@ -1,6 +1,6 @@
 
 import wasmModule from './pkg/libsubconverter_bg.wasm';
-import init, { sub_process_wasm, init_settings_wasm } from './pkg/libsubconverter.js';
+import init, { sub_process_wasm, init_settings_wasm, init_panic_hook } from './pkg/libsubconverter.js';
 
 let initialized = false;
 
@@ -22,15 +22,17 @@ export default {
                 // Initialize WASM module
                 await init(wasmModule);
 
-                // Initialize settings (optional, if needed)
-                // await init_settings_wasm("");
+                // Initialize panic hook for better error messages
+                try {
+                    init_panic_hook();
+                } catch (e) {
+                    console.log("Failed to init panic hook (maybe already set):", e);
+                }
 
                 initialized = true;
             }
 
             // Set global environment for the WASM bindings
-            // Note: Cloudflare Workers bindings are typically consistent per-isolate.
-            // Assigning to globalThis is safe for these stateless bindings.
             globalThis.SUB_ENV = env;
             globalThis.SUB_KV = env.KV;
 
@@ -46,14 +48,20 @@ export default {
                         queryObj[key] = value;
                     }
                 } else {
-                    // For other keys, last value wins (or could also handle arrays if needed)
                     queryObj[key] = value;
                 }
             }
 
             // Call subconverter
             const queryJson = JSON.stringify(queryObj);
-            const responseJson = await sub_process_wasm(queryJson);
+
+            let responseJson;
+            try {
+                responseJson = await sub_process_wasm(queryJson);
+            } catch (e) {
+                 // WASM errors might be objects or strings
+                 throw new Error(`WASM Error: ${typeof e === 'string' ? e : JSON.stringify(e)}`);
+            }
 
             // Parse response
             const responseData = JSON.parse(responseJson);
@@ -74,7 +82,8 @@ export default {
             });
 
         } catch (e) {
-            return new Response(`Error: ${e.message}`, { status: 500 });
+            const msg = e instanceof Error ? e.message : (typeof e === 'string' ? e : JSON.stringify(e));
+            return new Response(`Error: ${msg}\nStack: ${e.stack || 'none'}`, { status: 500 });
         }
     }
 };

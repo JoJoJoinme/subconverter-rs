@@ -298,7 +298,22 @@ pub async fn sub_process(
     // not initialized, in wasm that's common for cold start.
     if global.pref_path.is_empty() {
         debug!("Global config not initialized, reloading");
-        init_settings("").await?;
+        let result = init_settings("").await;
+
+        #[cfg(target_arch = "wasm32")]
+        if let Err(e) = &result {
+            if e.to_string().contains("No settings file found") {
+                debug!("No settings file found in WASM, proceeding with defaults");
+            } else {
+                return Err(format!("Settings initialization error: {}", e).into());
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Err(e) = result {
+            return Err(e);
+        }
+
         global = Settings::current();
     } else if global.reload_conf_on_request && !global.api_mode && !global.generator_mode {
         refresh_configuration().await;
