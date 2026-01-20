@@ -109,7 +109,7 @@ export async function convertSubscription(formData: Partial<SubconverterFormPara
     console.log("Sending conversion request with payload:", payload);
 
     // Use Cloudflare Worker URL for preview
-    const API_URL = 'https://subconverter-worker.testofdrive.workers.dev';
+    const API_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://subconverter-worker.testofdrive.workers.dev';
 
     const response = await fetch(API_URL, {
         method: 'POST',

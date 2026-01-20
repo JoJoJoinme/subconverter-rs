@@ -216,7 +216,8 @@ export default function ConvertPage() {
 
     // Generate API URL from form data
     const generateApiUrl = useCallback(() => {
-        const baseUrl = window.location.origin + '/api/sub';
+        // Use Cloudflare Worker URL
+        const baseUrl = process.env.NEXT_PUBLIC_WORKER_URL || 'https://subconverter-worker.testofdrive.workers.dev';
         const params = new URLSearchParams();
 
         // Add all set fields to the URL params

@@ -1,0 +1,15 @@
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/media/93f479601ee12b01-s.p.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/css/64f664e8c6c3f3a0.css HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/media/4cf2300e9c8272f7-s.p.woff2 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/a82cbd8b-a7cf3ca81cdf657d.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/webpack-c802c101aa1aa4f6.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/261-279190849f44e63d.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/main-app-5bc83553ce9e2ed6.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/999-65474cc6005739a3.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/843-44a805ef64251ad7.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/506-9a9533940f3f8845.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/app/page-016caaa1aa7a651a.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/app/layout-22d705c635c93152.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /startup.txt?_rsc=rxx9e HTTP/1.1" 200 -
+127.0.0.1 - - [20/Jan/2026 17:59:33] "GET /_next/static/chunks/app/startup/page-494d67ea4a5bf3a3.js HTTP/1.1" 200 -

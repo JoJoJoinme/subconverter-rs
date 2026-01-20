@@ -20,8 +20,9 @@ overwrite_original_rules=true
     const handleSaveConfig = () => {
         // Generate a unique ID for the config
         const configId = Math.random().toString(36).substring(2, 15);
-        const baseUrl = window.location.origin;
-        const link = `${baseUrl}/api/subconverter?config=${configId}`;
+        // Use Cloudflare Worker URL
+        const baseUrl = process.env.NEXT_PUBLIC_WORKER_URL || 'https://subconverter-worker.testofdrive.workers.dev';
+        const link = `${baseUrl}?config=${configId}`;
 
         setGeneratedLink(link);
 
