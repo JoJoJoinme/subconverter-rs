@@ -108,7 +108,10 @@ export async function convertSubscription(formData: Partial<SubconverterFormPara
 
     console.log("Sending conversion request with payload:", payload);
 
-    const response = await fetch('/api/sub', {
+    // Use Cloudflare Worker URL for preview
+    const API_URL = 'https://subconverter-worker.testofdrive.workers.dev';
+
+    const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -153,139 +156,68 @@ export async function convertSubscription(formData: Partial<SubconverterFormPara
  * Update rules from configured GitHub repositories
  */
 export async function updateRules(configPath?: string): Promise<RulesUpdateResult> {
-    const response = await fetch('/api/admin/rules/update', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            config_path: configPath
-        }),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                success: false,
-                message: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : { error: text }
-            } as RulesUpdateResult;
-        }
-    }
-
-    return response.json() as Promise<RulesUpdateResult>;
+    // Not supported in static export
+    return {
+        success: false,
+        message: "Not supported in static export mode",
+        details: {}
+    };
 }
 
 /**
  * Read file content from the server
  */
 export async function readFile(path: string): Promise<string> {
-    const response = await fetch(`/api/admin/${encodeURIComponent(path)}`);
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to read file: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.content || '';
+    // Not supported in static export
+    return "";
 }
 
 /**
  * Write content to a file on the server
  */
 export async function writeFile(path: string, content: string): Promise<void> {
-    const response = await fetch(`/api/admin/${encodeURIComponent(path)}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content }),
-    });
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to write file: ${response.statusText}`);
-    }
+    // Not supported in static export
+    return;
 }
 
 /**
  * Delete a file or directory on the server
  */
 export async function deleteFile(path: string): Promise<void> {
-    const response = await fetch(`/api/admin/${encodeURIComponent(path)}`, {
-        method: 'DELETE',
-    });
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to delete file: ${response.statusText}`);
-    }
+    // Not supported in static export
+    return;
 }
 
 /**
  * Check if a file exists on the server
  */
 export async function checkFileExists(path: string): Promise<boolean> {
-    const response = await fetch(`/api/admin/${encodeURIComponent(path)}?exists=true`);
-
-    if (!response.ok) {
-        return false;
-    }
-
-    const data = await response.json();
-    return data.exists || false;
+    // Not supported in static export
+    return false;
 }
 
 /**
  * Get file attributes from the server
  */
 export async function getFileAttributes(path: string): Promise<FileAttributes> {
-    const response = await fetch(`/api/admin/${encodeURIComponent(path)}?attributes=true`);
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to get file attributes: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.attributes;
+    // Not supported in static export
+    throw new Error("Not supported in static export");
 }
 
 /**
  * Create a directory on the server
  */
 export async function createDirectory(path: string): Promise<void> {
-    const response = await fetch(`/api/admin/${encodeURIComponent(path)}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ is_directory: true }),
-    });
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to create directory: ${response.statusText}`);
-    }
+    // Not supported in static export
+    return;
 }
 
 /**
  * List files in a directory
  */
 export async function listDirectory(path: string = ''): Promise<any> {
-    const response = await fetch(`/api/admin/list?path=${encodeURIComponent(path)}`);
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to list directory: ${response.statusText}`);
-    }
-
-    return await response.json();
+    // Not supported in static export
+    return { files: [] };
 }
 
 /**
@@ -296,17 +228,8 @@ export async function loadGitHubDirectory(
     shallow: boolean = true,
     recursive: boolean = true
 ): Promise<any> {
-    const response = await fetch(
-        `/api/admin/github?path=${encodeURIComponent(path)}&shallow=${shallow}&recursive=${recursive}`
-    );
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to load GitHub directory: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.result;
+    // Not supported in static export
+    return { result: {} };
 }
 
 /**
@@ -353,129 +276,36 @@ export interface CreateShortUrlRequest {
  * Create a new short URL
  */
 export async function createShortUrl(request: CreateShortUrlRequest): Promise<ShortUrlData> {
-    const response = await fetch('/api/s', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.json() as Promise<ShortUrlData>;
+    // Not supported in static export yet
+    throw new Error("Not supported in static export");
 }
 
 /**
  * Get list of all short URLs
  */
 export async function listShortUrls(): Promise<ShortUrlData[]> {
-    const response = await fetch('/api/s');
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    const data = await response.json();
-    return data.urls || [];
+    return [];
 }
 
 /**
  * Delete a short URL
  */
 export async function deleteShortUrl(id: string): Promise<void> {
-    const response = await fetch(`/api/s/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
+    return;
 }
 
 /**
  * Update a short URL
  */
 export async function updateShortUrl(id: string, updates: { target_url?: string; description?: string | null; custom_id?: string }): Promise<ShortUrlData> {
-    const response = await fetch(`/api/s/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.json() as Promise<ShortUrlData>;
+    throw new Error("Not supported in static export");
 }
 
 /**
  * Move a short URL to a new ID/alias
  */
 export async function moveShortUrl(id: string, newId: string): Promise<ShortUrlData> {
-    const response = await fetch(`/api/s/${encodeURIComponent(id)}/move`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ new_id: newId }),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.json() as Promise<ShortUrlData>;
+    throw new Error("Not supported in static export");
 }
 
 /**
@@ -513,22 +343,36 @@ export interface AppDownloadConfig {
  * Get available application downloads
  */
 export async function getAvailableDownloads(): Promise<AppDownloadInfo[]> {
-    const response = await fetch('/api/downloads');
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
+    // Mock data for static export
+    return [
+        {
+            name: "Subconverter",
+            version: "0.9.0",
+            platform: "windows",
+            size: 1024 * 1024 * 10,
+            download_url: "https://github.com/tindy2013/subconverter/releases/latest",
+            release_date: new Date().toISOString(),
+            description: "Windows version"
+        },
+        {
+            name: "Subconverter",
+            version: "0.9.0",
+            platform: "linux",
+            size: 1024 * 1024 * 10,
+            download_url: "https://github.com/tindy2013/subconverter/releases/latest",
+            release_date: new Date().toISOString(),
+            description: "Linux version"
+        },
+        {
+            name: "Subconverter",
+            version: "0.9.0",
+            platform: "macos",
+            size: 1024 * 1024 * 10,
+            download_url: "https://github.com/tindy2013/subconverter/releases/latest",
+            release_date: new Date().toISOString(),
+            description: "macOS version"
         }
-    }
-
-    return response.json() as Promise<AppDownloadInfo[]>;
+    ];
 }
 
 /**
@@ -536,7 +380,7 @@ export async function getAvailableDownloads(): Promise<AppDownloadInfo[]> {
  * Returns a URL to initiate the download
  */
 export function getDownloadUrl(appId: string, platform: string): string {
-    return `/api/downloads/${encodeURIComponent(appId)}/${encodeURIComponent(platform)}`;
+    return `https://github.com/tindy2013/subconverter/releases/latest`;
 }
 
 /**
@@ -544,23 +388,7 @@ export function getDownloadUrl(appId: string, platform: string): string {
  * This is only available to admin users
  */
 export async function getDownloadConfigs(): Promise<AppDownloadConfig[]> {
-    const response = await fetch('/api/admin/downloads');
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    const data = await response.json();
-    return data.downloads || [];
+    return [];
 }
 
 /**
@@ -568,35 +396,14 @@ export async function getDownloadConfigs(): Promise<AppDownloadConfig[]> {
  * This is only available to admin users
  */
 export async function updateDownloadConfigs(downloads: AppDownloadConfig[]): Promise<boolean> {
-    const response = await fetch('/api/admin/downloads', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ downloads }),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    const result = await response.json();
-    return result.success === true;
+    return false;
 }
 
 /**
  * Detect the user's operating system
  */
 export function detectUserOS(): string {
+    if (typeof navigator === 'undefined') return 'unknown';
     const platform = navigator.platform.toLowerCase();
 
     if (platform.includes('win')) {
@@ -663,100 +470,28 @@ export interface ServerSettings {
  * Get current server settings
  */
 export async function getServerSettings(): Promise<ServerSettings> {
-    const response = await fetch('/api/admin/settings');
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.json() as Promise<ServerSettings>;
+    throw new Error("Not supported in static export");
 }
 
 /**
  * Update server settings
  */
 export async function updateServerSettings(settings: Partial<ServerSettings>): Promise<ServerSettings> {
-    const response = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings),
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.json() as Promise<ServerSettings>;
+    throw new Error("Not supported in static export");
 }
 
 /**
  * Export settings to file
  */
 export async function exportSettings(format: 'yaml' | 'toml' | 'ini' = 'yaml'): Promise<Blob> {
-    const response = await fetch(`/api/admin/settings/export?format=${format}`);
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.blob();
+    throw new Error("Not supported in static export");
 }
 
 /**
  * Import settings from file
  */
 export async function importSettings(file: File): Promise<ServerSettings> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch('/api/admin/settings/import', {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const text = await response.text();
-        try {
-            const errorData = JSON.parse(text);
-            throw errorData;
-        } catch (err) {
-            throw {
-                error: `API Error (${response.status})`,
-                details: typeof err === 'object' && err !== null ? err : text
-            };
-        }
-    }
-
-    return response.json() as Promise<ServerSettings>;
+    throw new Error("Not supported in static export");
 }
 
 /**
@@ -768,33 +503,14 @@ export async function importSettings(file: File): Promise<ServerSettings> {
  * If the file doesn't exist, it will create it from the example file
  */
 export async function readSettingsFile(): Promise<string> {
-    try {
-        try {
-            // Attempt to read pref.yml directly first
-            return await readFile('pref.yml');
-        } catch (err) {
-            // If pref.yml doesn't exist or can't be read, create it from example
-            console.log("pref.yml not found, creating from example...");
-            const exampleContent = await readFile('pref.example.yml');
-            await writeFile('pref.yml', exampleContent);
-            return exampleContent;
-        }
-    } catch (error) {
-        console.error("Error reading settings file:", error);
-        throw error;
-    }
+    return "";
 }
 
 /**
  * Write content to the pref.yml file
  */
 export async function writeSettingsFile(content: string): Promise<void> {
-    try {
-        await writeFile('pref.yml', content);
-    } catch (error) {
-        console.error("Error writing settings file:", error);
-        throw error;
-    }
+    return;
 }
 
 /**
@@ -802,37 +518,7 @@ export async function writeSettingsFile(content: string): Promise<void> {
  * Uses the WASM initialization function directly
  */
 export async function initSettings(prefPath: string = ''): Promise<boolean> {
-    try {
-        const response = await fetch('/api/sub/init', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ pref_path: prefPath }),
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            try {
-                const errorData = JSON.parse(text);
-                throw errorData;
-            } catch (err) {
-                throw {
-                    error: `API Error (${response.status})`,
-                    details: typeof err === 'object' && err !== null ? err : text
-                };
-            }
-        }
-
-        const result = await response.json();
-        return result.success;
-    } catch (error) {
-        console.error("Error initializing settings:", error);
-        throw {
-            error: "Failed to initialize settings",
-            details: error instanceof Error ? error.message : String(error)
-        };
-    }
+    return true;
 }
 
 /**
@@ -841,13 +527,6 @@ export async function initSettings(prefPath: string = ''): Promise<boolean> {
  * Returns true if the GitHub load was triggered (likely first run), false otherwise.
  */
 export async function initializeWebApp(): Promise<{ success: boolean; githubLoadTriggered: boolean; message: string }> {
-    const response = await fetch('/api/init');
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.details || data.error || `Failed to initialize webapp: ${response.statusText}`);
-    }
-
-    return data;
+    // Mock initialization for static deployment
+    return { success: true, githubLoadTriggered: false, message: "Initialized (Mock)" };
 }

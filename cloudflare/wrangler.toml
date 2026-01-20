@@ -3,12 +3,10 @@ main = "worker.js"
 compatibility_date = "2024-04-01"
 
 # KV Namespace binding
-# Users must replace the ID with their own KV namespace ID
-# Run `wrangler kv:namespace create SUB_KV` to get an ID.
 [[kv_namespaces]]
 binding = "KV"
-id = "PUT_YOUR_KV_ID_HERE"
-preview_id = "PUT_YOUR_PREVIEW_KV_ID_HERE"
+id = "ead4ca6886c342e2b50a3a6ef9485f49"
+preview_id = "ead4ca6886c342e2b50a3a6ef9485f49"
 
 # Rules for building/bundling
 # Wrangler automatically handles .wasm files if imported from .js
