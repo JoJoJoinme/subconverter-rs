@@ -1,0 +1,17 @@
+name = "subconverter-worker"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+# KV Namespace binding
+# Users must replace the ID with their own KV namespace ID
+# Run `wrangler kv:namespace create SUB_KV` to get an ID.
+[[kv_namespaces]]
+binding = "KV"
+id = "PUT_YOUR_KV_ID_HERE"
+preview_id = "PUT_YOUR_PREVIEW_KV_ID_HERE"
+
+# Rules for building/bundling
+# Wrangler automatically handles .wasm files if imported from .js
+
+[observability]
+enabled = true

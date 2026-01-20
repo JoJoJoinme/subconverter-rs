@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 default = []
 web-api = ["actix-web"]
 js-runtime = ["rquickjs"]
+cloudflare = []
 
 [[bin]]
 name = "subconverter"
