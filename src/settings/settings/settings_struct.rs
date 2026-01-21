@@ -321,7 +321,7 @@ impl Default for Settings {
             add_emoji: false,
             remove_emoji: false,
             append_type: false,
-            filter_deprecated: default_true(),
+            filter_deprecated: false,
             udp_flag: None,
             tfo_flag: None,
             skip_cert_verify: None,
