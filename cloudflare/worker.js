@@ -38,8 +38,28 @@ export default {
 
             const url = new URL(request.url);
 
-            // Construct query object from URL search params
-            const queryObj = {};
+            // Construct query object
+            let queryObj = {};
+
+            // 1. Try to parse JSON body if present
+            if (request.method === "POST" || request.method === "PUT") {
+                const contentType = request.headers.get("content-type") || "";
+                if (contentType.includes("application/json")) {
+                    try {
+                        const body = await request.json();
+                        if (typeof body === 'object' && body !== null) {
+                            // Ensure all values are strings or convertible to strings expected by subconverter
+                            for (const [key, value] of Object.entries(body)) {
+                                queryObj[key] = String(value);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Failed to parse JSON body:", e);
+                    }
+                }
+            }
+
+            // 2. Parse URL search params (overwriting or appending to body params)
             for (const [key, value] of url.searchParams) {
                 if (key === 'url') {
                     if (queryObj[key]) {

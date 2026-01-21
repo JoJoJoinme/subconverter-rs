@@ -5,8 +5,8 @@ compatibility_date = "2024-04-01"
 # KV Namespace binding
 [[kv_namespaces]]
 binding = "KV"
-id = "YOUR_KV_NAMESPACE_ID"
-preview_id = "YOUR_KV_NAMESPACE_PREVIEW_ID"
+id = "ead4ca6886c342e2b50a3a6ef9485f49"
+preview_id = "ead4ca6886c342e2b50a3a6ef9485f49"
 
 # Rules for building/bundling
 # Wrangler automatically handles .wasm files if imported from .js
