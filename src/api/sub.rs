@@ -436,7 +436,9 @@ pub async fn sub_process(
     builder.sort(query.sort.unwrap_or(global.enable_sort));
     builder.sort_script(query.sort_script.unwrap_or(global.sort_script.clone()));
 
-    builder.filter_deprecated(query.fdn.unwrap_or(global.filter_deprecated));
+    let filter_deprecated = query.fdn.unwrap_or(global.filter_deprecated);
+    debug!("filter_deprecated: {}, query.fdn: {:?}, global.filter_deprecated: {}", filter_deprecated, query.fdn, global.filter_deprecated);
+    builder.filter_deprecated(filter_deprecated);
     builder.clash_new_field_name(query.new_name.unwrap_or(global.clash_use_new_field));
     builder.clash_script(query.script.unwrap_or_default());
     builder.clash_classical_ruleset(query.classic.unwrap_or_default());
