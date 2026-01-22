@@ -149,17 +149,29 @@ subconverter-rs can be deployed to Cloudflare Workers for a serverless experienc
 
 ### Build and Deploy
 
-1.  **Build the WASM module:**
+You can deploy using either the pre-compiled release or by building from source.
 
-    From the root of the repository, run:
+#### Option 1: Use Pre-compiled Release (Recommended)
+
+1.  Download `subconverter-cloudflare-vX.Y.Z.zip` from the [Releases page](https://github.com/lonelam/subconverter-rs/releases).
+2.  Unzip the archive.
+3.  Proceed to **Configure Wrangler** below.
+
+#### Option 2: Build from Source
+
+1.  From the root of the repository, run:
     ```bash
     ./scripts/build-cloudflare.sh
     ```
     This script compiles the Rust code into WebAssembly with the `cloudflare` feature enabled.
+2.  Navigate to the `cloudflare` directory:
+    ```bash
+    cd cloudflare
+    ```
 
-2.  **Configure Wrangler:**
+### Configure Wrangler
 
-    Edit `cloudflare/wrangler.toml` to set your KV namespace ID.
+1.  Edit `wrangler.toml` (in the unzipped folder or `cloudflare/` directory) to set your KV namespace ID.
     ```toml
     [[kv_namespaces]]
     binding = "KV"
@@ -170,13 +182,12 @@ subconverter-rs can be deployed to Cloudflare Workers for a serverless experienc
     wrangler kv:namespace create SUB_KV
     ```
 
-3.  **Deploy to Cloudflare:**
+### Deploy to Cloudflare
 
-    Navigate to the `cloudflare` directory and run:
-    ```bash
-    cd cloudflare
-    wrangler deploy
-    ```
+Run the deployment command:
+```bash
+wrangler deploy
+```
 
 For more details, see [cloudflare/README.md](cloudflare/README.md).
 
