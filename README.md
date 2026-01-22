@@ -52,6 +52,7 @@ https://subconverter-rs.netlify.app/
 - Customizable templates and rule sets
 - HTTP server with RESTful API endpoints
 - Compatible with original subconverter configuration
+- Serverless deployment on Cloudflare Workers
 
 ---
 
@@ -128,6 +129,56 @@ cd subconverter-rs
 cargo build --release --features=web-api
 ```
 The binary will be available at `target/release/subconverter-rs`.
+
+### Cloudflare Workers
+
+See the [Deploy to Cloudflare Workers](#-deploy-to-cloudflare-workers) section below.
+
+---
+
+## ☁️ Deploy to Cloudflare Workers
+
+subconverter-rs can be deployed to Cloudflare Workers for a serverless experience.
+
+### Prerequisites
+
+- [Rust & Cargo](https://www.rust-lang.org/tools/install)
+- [Node.js](https://nodejs.org/) (for Wrangler)
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (`npm install -g wrangler`)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+
+### Build and Deploy
+
+1.  **Build the WASM module:**
+
+    From the root of the repository, run:
+    ```bash
+    ./scripts/build-cloudflare.sh
+    ```
+    This script compiles the Rust code into WebAssembly with the `cloudflare` feature enabled.
+
+2.  **Configure Wrangler:**
+
+    Edit `cloudflare/wrangler.toml` to set your KV namespace ID.
+    ```toml
+    [[kv_namespaces]]
+    binding = "KV"
+    id = "YOUR_KV_NAMESPACE_ID"
+    ```
+    You can create a KV namespace with:
+    ```bash
+    wrangler kv:namespace create SUB_KV
+    ```
+
+3.  **Deploy to Cloudflare:**
+
+    Navigate to the `cloudflare` directory and run:
+    ```bash
+    cd cloudflare
+    wrangler deploy
+    ```
+
+For more details, see [cloudflare/README.md](cloudflare/README.md).
 
 ---
 
@@ -306,6 +357,28 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4.  **Add tests**: Increase test coverage to ensure stability.
 5.  **Documentation**: Improve docs or add examples to help others use the project.
 6.  **Performance optimizations**: Help make the converter even faster.
+
+---
+
+## 🧪 Testing
+
+### Unit Tests
+
+Run the test suite using Cargo:
+
+```bash
+cargo test
+```
+
+This will run all unit tests defined in the source code, verifying parsing logic and other components.
+
+### Binary Verification
+
+You can verify the binary functionality by running a local conversion:
+
+```bash
+cargo run -- --url "ss://YWVzLTEyOC1nY206dGVzdA==@192.168.100.1:8888#Example1" --output sub.yaml
+```
 
 ---
 
