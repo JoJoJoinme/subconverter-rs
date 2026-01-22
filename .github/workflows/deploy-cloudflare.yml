@@ -1,0 +1,80 @@
+name: Deploy to Cloudflare
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cloudflare/**'
+      - 'src/**'
+      - 'www/**'
+      - '.github/workflows/deploy-cloudflare.yml'
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    name: Deploy Worker (Backend)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        working-directory: cloudflare
+        run: npm install
+
+      - name: Build Worker
+        working-directory: cloudflare
+        run: npm run build
+
+      - name: Deploy Worker
+        working-directory: cloudflare
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    name: Deploy Pages (Frontend)
+    needs: deploy-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        working-directory: www
+        run: npm install
+
+      - name: Build Frontend
+        working-directory: www
+        run: npm run build
+        env:
+          # This must be set as a Repository Variable or Secret in GitHub
+          NEXT_PUBLIC_WORKER_URL: ${{ vars.NEXT_PUBLIC_WORKER_URL || secrets.NEXT_PUBLIC_WORKER_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: subconverter-web # Ensure this project exists in Cloudflare Pages
+          directory: www/out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: main

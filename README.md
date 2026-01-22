@@ -168,6 +168,20 @@ You can deploy subconverter-rs to Cloudflare Workers (Backend) and Cloudflare Pa
     ```
 5.  Deploy the `out` directory to Cloudflare Pages.
 
+### GitHub Actions Deployment
+
+You can automate the deployment using the provided GitHub Actions workflow (`.github/workflows/deploy-cloudflare.yml`).
+
+1.  **Configure Secrets:** Go to your repository settings -> Secrets and variables -> Actions, and add the following secrets:
+    -   `CLOUDFLARE_API_TOKEN`: Your Cloudflare API Token (with permissions for Workers and Pages).
+    -   `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID.
+
+2.  **Configure Variables:** In the "Variables" tab, add:
+    -   `NEXT_PUBLIC_WORKER_URL`: The full URL of your deployed Worker (e.g., `https://subconverter-worker.your-subdomain.workers.dev`).
+        *Note: If you don't know this yet, deploy the backend first manually or via workflow once, then set this variable.*
+
+3.  **Run Workflow:** Go to the "Actions" tab, select "Deploy to Cloudflare", and trigger it manually.
+
 ---
 
 ## 🔰 Basic Usage
