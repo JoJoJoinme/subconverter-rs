@@ -1,7 +1,8 @@
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen(module = "/js/kv_bindings.js")]
+#[cfg_attr(feature = "cloudflare", wasm_bindgen(module = "/js/kv_bindings_cloudflare.js"))]
+#[cfg_attr(not(feature = "cloudflare"), wasm_bindgen(module = "/js/kv_bindings.js"))]
 extern "C" {
     #[wasm_bindgen(catch)]
     pub async fn kv_get(key: &str) -> Result<JsValue, JsValue>;

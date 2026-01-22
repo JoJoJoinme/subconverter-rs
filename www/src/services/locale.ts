@@ -1,16 +1,16 @@
-'use server';
-
-import { cookies } from 'next/headers';
 import { Locale, defaultLocale } from '@/i18n/config';
 
-// In this example the locale is read from a cookie. You could alternatively
-// also read it from a database, backend service, or any other source.
-const COOKIE_NAME = 'NEXT_LOCALE';
+// Modified for static export compatibility
+// 'use server' and cookies() are not supported in output: 'export'
 
 export async function getUserLocale() {
-    return (await cookies()).get(COOKIE_NAME)?.value || defaultLocale;
+    // For static export, we default to the configured default locale
+    // In a real server environment, this would read from cookies
+    return defaultLocale;
 }
 
 export async function setUserLocale(locale: Locale) {
-    (await cookies()).set(COOKIE_NAME, locale);
+    // No-op for static export
+    // Client-side code should handle cookie setting if needed
+    console.log('setUserLocale called with', locale);
 }

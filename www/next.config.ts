@@ -24,6 +24,10 @@ console.log('✅ Is Vercel environment:', isVercel);
 console.log('✅ Is Development environment:', isDev);
 
 const nextConfig: NextConfig = {
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
   reactStrictMode: true,
   // Allows importing wasm files from pkg directory
   // transpilePackages: ['subconverter-wasm'],
@@ -73,15 +77,6 @@ const nextConfig: NextConfig = {
 
     // Make sure we don't interfere with the existing loaders
     return config;
-  },
-  async rewrites() {
-    return [
-      // Rewrite all API calls to the pages/api directory
-      {
-        source: '/api/:path*',
-        destination: '/api/:path*',
-      },
-    ];
   },
   outputFileTracingIncludes: {
     '/api/': ['./node_modules/subconverter-wasm/**/*'],
