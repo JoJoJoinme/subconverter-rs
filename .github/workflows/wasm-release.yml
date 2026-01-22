@@ -78,14 +78,14 @@ jobs:
           VERSION="${{ steps.set-version.outputs.version }}"
           echo "Building Cloudflare Worker package for version $VERSION..."
 
-          # Build WASM for Cloudflare (target web)
-          wasm-pack build --target web --out-dir cloudflare_pkg --release --features cloudflare
+          # Build WASM using script
+          ./scripts/build-cloudflare.sh
 
           # Prepare artifact structure
           mkdir -p subconverter-cloudflare
           cp cloudflare/worker.js subconverter-cloudflare/
           cp cloudflare/wrangler.toml subconverter-cloudflare/
-          cp -r cloudflare_pkg subconverter-cloudflare/pkg
+          cp -r cloudflare/pkg subconverter-cloudflare/pkg
 
           # Create zip
           zip -r subconverter-cloudflare-${VERSION}.zip subconverter-cloudflare

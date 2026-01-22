@@ -302,6 +302,18 @@ wrangler deploy
 
 更多详情请参考 [cloudflare/README.md](cloudflare/README.md)。
 
+### 通过 GitHub Actions 自动部署
+
+您可以使用提供的 GitHub Actions 工作流自动部署到 Cloudflare Workers。
+
+1.  Fork 本仓库。
+2.  进入 **Settings** (设置) -> **Secrets and variables** (密钥与变量) -> **Actions**。
+3.  添加以下密钥 (Secrets):
+    *   `CLOUDFLARE_API_TOKEN`: 您的 Cloudflare API Token (使用 "Edit Cloudflare Workers" 模板)。
+    *   `CLOUDFLARE_ACCOUNT_ID`: 您的 Cloudflare Account ID (可在仪表盘 URL 或侧边栏中找到)。
+4.  编辑您 fork 仓库中的 `cloudflare/wrangler.toml`，更新 `[[kv_namespaces]]` 下的 `id` 字段为您自己的 KV 命名空间 ID。
+5.  推送到 `main` 分支或手动触发 "Deploy to Cloudflare Workers" 工作流。
+
 * * *
 
 ## 🧪 测试
