@@ -311,7 +311,7 @@ wrangler deploy
 3.  添加以下密钥 (Secrets):
     *   `CLOUDFLARE_API_TOKEN`: 您的 Cloudflare API Token (使用 "Edit Cloudflare Workers" 模板)。
     *   `CLOUDFLARE_ACCOUNT_ID`: 您的 Cloudflare Account ID (可在仪表盘 URL 或侧边栏中找到)。
-4.  编辑您 fork 仓库中的 `cloudflare/wrangler.toml`，更新 `[[kv_namespaces]]` 下的 `id` 字段为您自己的 KV 命名空间 ID。
+4.  编辑您 fork 仓库中的 `cloudflare/wrangler.toml`，更新 `[[kv_namespaces]]` 下的 `id` 字段为您自己的 KV 命名空间 ID (此 ID 不敏感，可提交到仓库)。
 5.  推送到 `main` 分支或手动触发 "Deploy to Cloudflare Workers" 工作流。
 
 详细的验证步骤请参考 [验证部署指南](docs/VERIFY_DEPLOY.md)。

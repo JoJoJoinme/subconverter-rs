@@ -200,7 +200,7 @@ You can automatically deploy to Cloudflare Workers using the provided GitHub Act
 3.  Add the following secrets:
     *   `CLOUDFLARE_API_TOKEN`: Your Cloudflare API Token (Template: Edit Cloudflare Workers).
     *   `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID (found in the dashboard URL or sidebar).
-4.  Edit `cloudflare/wrangler.toml` in your forked repo and update the `id` field under `[[kv_namespaces]]` with your own KV Namespace ID.
+4.  Edit `cloudflare/wrangler.toml` in your forked repo and update the `id` field under `[[kv_namespaces]]` with your own KV Namespace ID (this ID is not sensitive and can be committed).
 5.  Push to the `main` branch or manually trigger the "Deploy to Cloudflare Workers" workflow.
 
 ---
