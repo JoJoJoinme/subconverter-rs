@@ -298,7 +298,22 @@ pub async fn sub_process(
     // not initialized, in wasm that's common for cold start.
     if global.pref_path.is_empty() {
         debug!("Global config not initialized, reloading");
-        init_settings("").await?;
+        let result = init_settings("").await;
+
+        #[cfg(target_arch = "wasm32")]
+        if let Err(e) = &result {
+            if e.to_string().contains("No settings file found") {
+                debug!("No settings file found in WASM, proceeding with defaults");
+            } else {
+                return Err(format!("Settings initialization error: {}", e).into());
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Err(e) = result {
+            return Err(e);
+        }
+
         global = Settings::current();
     } else if global.reload_conf_on_request && !global.api_mode && !global.generator_mode {
         refresh_configuration().await;
@@ -421,7 +436,9 @@ pub async fn sub_process(
     builder.sort(query.sort.unwrap_or(global.enable_sort));
     builder.sort_script(query.sort_script.unwrap_or(global.sort_script.clone()));
 
-    builder.filter_deprecated(query.fdn.unwrap_or(global.filter_deprecated));
+    let filter_deprecated = query.fdn.unwrap_or(global.filter_deprecated);
+    debug!("filter_deprecated: {}, query.fdn: {:?}, global.filter_deprecated: {}", filter_deprecated, query.fdn, global.filter_deprecated);
+    builder.filter_deprecated(filter_deprecated);
     builder.clash_new_field_name(query.new_name.unwrap_or(global.clash_use_new_field));
     builder.clash_script(query.script.unwrap_or_default());
     builder.clash_classical_ruleset(query.classic.unwrap_or_default());

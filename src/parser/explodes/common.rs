@@ -45,8 +45,7 @@ pub fn explode(link: &str, node: &mut Proxy) -> bool {
     } else if link.starts_with("ss://") {
         super::ss::explode_ss(link, node)
     } else if link.starts_with("ssr://") {
-        // super::ssr::explode_ssr(link, node)
-        false
+        super::ssr::explode_ssr(link, node)
     } else if link.starts_with("socks://")
         || link.starts_with("https://t.me/socks")
         || link.starts_with("tg://socks")

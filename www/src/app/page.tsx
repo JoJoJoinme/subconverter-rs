@@ -82,7 +82,8 @@ export default function Home() {
 
   // Generate the API URL based on form inputs
   const generateApiUrl = useCallback(() => {
-    const baseUrl = window.location.origin + '/api/sub';
+    // Use Cloudflare Worker URL
+    const baseUrl = process.env.NEXT_PUBLIC_WORKER_URL || 'https://subconverter-worker.testofdrive.workers.dev';
     const params = new URLSearchParams();
     params.append('target', targetFormat);
     params.append('url', subscriptionUrl);

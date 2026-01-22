@@ -217,15 +217,22 @@ pub fn proxy_to_clash_yaml(
         // Check if this proxy type should be skipped
         let should_skip = match node.proxy_type {
             // Skip Snell v4+ if exists - exactly matching C++ behavior
-            ProxyType::Snell if node.snell_version >= 4 => true,
+            ProxyType::Snell if node.snell_version >= 4 => {
+                error!("Skipping Snell v4+ node: {}", remark);
+                true
+            },
 
             // Skip if not using ClashR or if using deprecated features with ShadowsocksR
-            ProxyType::ShadowsocksR if !clash_r && ext.filter_deprecated => true,
+            ProxyType::ShadowsocksR if !clash_r && ext.filter_deprecated => {
+                error!("Skipping SSR node (filter_deprecated=true, clash_r=false): {}", remark);
+                true
+            },
 
             // Skip chacha20 encryption if filter_deprecated is enabled
             ProxyType::Shadowsocks
                 if ext.filter_deprecated && node.encrypt_method.as_deref() == Some("chacha20") =>
             {
+                error!("Skipping SS chacha20 node (filter_deprecated=true): {}", remark);
                 true
             }
 
@@ -235,13 +242,21 @@ pub fn proxy_to_clash_yaml(
                 let protocol = node.protocol.as_deref().unwrap_or("");
                 let obfs = node.obfs.as_deref().unwrap_or("");
 
-                !CLASH_SSR_CIPHERS.contains(encrypt_method)
+                if !CLASH_SSR_CIPHERS.contains(encrypt_method)
                     || !CLASHR_PROTOCOLS.contains(protocol)
-                    || !CLASHR_OBFS.contains(obfs)
+                    || !CLASHR_OBFS.contains(obfs) {
+                        error!("Skipping SSR deprecated features node: {}", remark);
+                        true
+                    } else {
+                        false
+                    }
             }
 
             // Skip unsupported proxy types
-            ProxyType::Unknown | ProxyType::HTTPS => true,
+            ProxyType::Unknown | ProxyType::HTTPS => {
+                error!("Skipping Unknown/HTTPS node: {} (type: {:?})", remark, node.proxy_type);
+                true
+            },
 
             // Process all other types
             _ => false,

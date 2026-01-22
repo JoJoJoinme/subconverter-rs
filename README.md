@@ -52,6 +52,7 @@ https://subconverter-rs.netlify.app/
 - Customizable templates and rule sets
 - HTTP server with RESTful API endpoints
 - Compatible with original subconverter configuration
+- WebAssembly support for serverless deployment (Cloudflare Workers, etc.)
 
 ---
 
@@ -128,6 +129,44 @@ cd subconverter-rs
 cargo build --release --features=web-api
 ```
 The binary will be available at `target/release/subconverter-rs`.
+
+### Deploy on Cloudflare
+
+You can deploy subconverter-rs to Cloudflare Workers (Backend) and Cloudflare Pages (Frontend).
+
+#### Backend (Cloudflare Workers)
+
+1.  Clone the repository.
+2.  Install dependencies and build the worker:
+    ```bash
+    cd cloudflare
+    npm install
+    npm run build
+    ```
+3.  Deploy to Cloudflare Workers using Wrangler:
+    ```bash
+    npx wrangler deploy
+    ```
+    *Note: You need to have a Cloudflare account and `wrangler` CLI configured.*
+
+#### Frontend (Cloudflare Pages)
+
+1.  Navigate to the `www` directory:
+    ```bash
+    cd www
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Configure the backend URL:
+    - Create a `.env.local` file or set the environment variable in Cloudflare Pages dashboard.
+    - Set `NEXT_PUBLIC_API_URL` to your deployed Worker URL (e.g., `https://subconverter-worker.your-name.workers.dev`).
+4.  Build the static site:
+    ```bash
+    npm run build
+    ```
+5.  Deploy the `out` directory to Cloudflare Pages.
 
 ---
 
