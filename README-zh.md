@@ -314,6 +314,8 @@ wrangler deploy
 4.  编辑您 fork 仓库中的 `cloudflare/wrangler.toml`，更新 `[[kv_namespaces]]` 下的 `id` 字段为您自己的 KV 命名空间 ID。
 5.  推送到 `main` 分支或手动触发 "Deploy to Cloudflare Workers" 工作流。
 
+详细的验证步骤请参考 [验证部署指南](docs/VERIFY_DEPLOY.md)。
+
 * * *
 
 ## 🧪 测试
