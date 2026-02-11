@@ -220,19 +220,16 @@ pub fn proxy_to_clash_yaml(
             ProxyType::Snell if node.snell_version >= 4 => {
                 error!("Skipping Snell v4+ node: {}", remark);
                 true
-            },
-
-            // Skip if not using ClashR or if using deprecated features with ShadowsocksR
-            ProxyType::ShadowsocksR if !clash_r && ext.filter_deprecated => {
-                error!("Skipping SSR node (filter_deprecated=true, clash_r=false): {}", remark);
-                true
-            },
+            }
 
             // Skip chacha20 encryption if filter_deprecated is enabled
             ProxyType::Shadowsocks
                 if ext.filter_deprecated && node.encrypt_method.as_deref() == Some("chacha20") =>
             {
-                error!("Skipping SS chacha20 node (filter_deprecated=true): {}", remark);
+                error!(
+                    "Skipping SS chacha20 node (filter_deprecated=true): {}",
+                    remark
+                );
                 true
             }
 
@@ -242,21 +239,25 @@ pub fn proxy_to_clash_yaml(
                 let protocol = node.protocol.as_deref().unwrap_or("");
                 let obfs = node.obfs.as_deref().unwrap_or("");
 
-                if !CLASH_SSR_CIPHERS.contains(encrypt_method)
+                if (!clash_r && !CLASH_SSR_CIPHERS.contains(encrypt_method))
                     || !CLASHR_PROTOCOLS.contains(protocol)
-                    || !CLASHR_OBFS.contains(obfs) {
-                        error!("Skipping SSR deprecated features node: {}", remark);
-                        true
-                    } else {
-                        false
-                    }
+                    || !CLASHR_OBFS.contains(obfs)
+                {
+                    error!("Skipping SSR deprecated features node: {}", remark);
+                    true
+                } else {
+                    false
+                }
             }
 
             // Skip unsupported proxy types
             ProxyType::Unknown | ProxyType::HTTPS => {
-                error!("Skipping Unknown/HTTPS node: {} (type: {:?})", remark, node.proxy_type);
+                error!(
+                    "Skipping Unknown/HTTPS node: {} (type: {:?})",
+                    remark, node.proxy_type
+                );
                 true
-            },
+            }
 
             // Process all other types
             _ => false,
@@ -379,5 +380,121 @@ pub fn proxy_to_clash_yaml(
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn build_ssr_proxy(name: &str, cipher: &str, protocol: &str, obfs: &str) -> Proxy {
+        Proxy {
+            proxy_type: ProxyType::ShadowsocksR,
+            remark: name.to_string(),
+            hostname: "example.com".to_string(),
+            port: 443,
+            encrypt_method: Some(cipher.to_string()),
+            password: Some("pwd".to_string()),
+            protocol: Some(protocol.to_string()),
+            obfs: Some(obfs.to_string()),
+            ..Default::default()
+        }
+    }
+
+    fn build_ss_proxy(name: &str, cipher: &str) -> Proxy {
+        Proxy {
+            proxy_type: ProxyType::Shadowsocks,
+            remark: name.to_string(),
+            hostname: "example.com".to_string(),
+            port: 443,
+            encrypt_method: Some(cipher.to_string()),
+            password: Some("pwd".to_string()),
+            ..Default::default()
+        }
+    }
+
+    fn extract_proxy_names(yaml_node: &YamlValue) -> Vec<String> {
+        yaml_node
+            .get("proxies")
+            .and_then(|v| v.as_sequence())
+            .map(|seq| {
+                seq.iter()
+                    .filter_map(|item| item.get("name").and_then(|x| x.as_str()))
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn clash_with_filter_deprecated_keeps_supported_ssr() {
+        let mut nodes = vec![build_ssr_proxy(
+            "ssr-ok",
+            "aes-256-cfb",
+            "auth_aes128_sha1",
+            "tls1.2_ticket_auth",
+        )];
+        let mut yaml_node = YamlValue::Mapping(Mapping::new());
+        let mut ext = ExtraSettings {
+            filter_deprecated: true,
+            clash_new_field_name: true,
+            ..Default::default()
+        };
+
+        proxy_to_clash_yaml(
+            &mut nodes,
+            &mut yaml_node,
+            &vec![],
+            &vec![],
+            false,
+            &mut ext,
+        );
+
+        let names = extract_proxy_names(&yaml_node);
+        assert_eq!(names, vec!["ssr-ok".to_string()]);
+    }
+
+    #[test]
+    fn clashr_with_filter_deprecated_allows_non_clash_cipher_ssr() {
+        let mut nodes = vec![build_ssr_proxy(
+            "ssr-clashr-only",
+            "none",
+            "auth_aes128_sha1",
+            "tls1.2_ticket_auth",
+        )];
+        let mut yaml_node = YamlValue::Mapping(Mapping::new());
+        let mut ext = ExtraSettings {
+            filter_deprecated: true,
+            clash_new_field_name: true,
+            ..Default::default()
+        };
+
+        proxy_to_clash_yaml(&mut nodes, &mut yaml_node, &vec![], &vec![], true, &mut ext);
+
+        let names = extract_proxy_names(&yaml_node);
+        assert_eq!(names, vec!["ssr-clashr-only".to_string()]);
+    }
+
+    #[test]
+    fn filter_deprecated_still_filters_chacha20_ss() {
+        let mut nodes = vec![build_ss_proxy("ss-chacha20", "chacha20")];
+        let mut yaml_node = YamlValue::Mapping(Mapping::new());
+        let mut ext = ExtraSettings {
+            filter_deprecated: true,
+            clash_new_field_name: true,
+            ..Default::default()
+        };
+
+        proxy_to_clash_yaml(
+            &mut nodes,
+            &mut yaml_node,
+            &vec![],
+            &vec![],
+            false,
+            &mut ext,
+        );
+
+        let names = extract_proxy_names(&yaml_node);
+        assert!(names.is_empty());
     }
 }
