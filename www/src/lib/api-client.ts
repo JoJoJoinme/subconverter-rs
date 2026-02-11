@@ -61,6 +61,14 @@ export interface SubconverterFormParams {
     expand?: boolean;
 }
 
+export function getWorkerUrl(): string {
+    const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL?.trim();
+    if (!workerUrl) {
+        throw new Error('NEXT_PUBLIC_WORKER_URL is required');
+    }
+    return workerUrl;
+}
+
 /**
  * Rules update request parameters
  */
@@ -108,8 +116,7 @@ export async function convertSubscription(formData: Partial<SubconverterFormPara
 
     console.log("Sending conversion request with payload:", payload);
 
-    // Use Cloudflare Worker URL for preview
-    const API_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'https://subconverter-worker.testofdrive.workers.dev';
+    const API_URL = getWorkerUrl();
 
     const response = await fetch(API_URL, {
         method: 'POST',

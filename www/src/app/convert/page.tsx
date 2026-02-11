@@ -8,8 +8,10 @@ import {
     SubResponseData,
     ErrorData,
     createShortUrl,
-    ShortUrlData
+    ShortUrlData,
+    getWorkerUrl
 } from '@/lib/api-client';
+import yaml from 'js-yaml';
 
 // Define supported targets
 const SUPPORTED_TARGETS = [
@@ -35,6 +37,13 @@ export default function ConvertPage() {
     const [shortUrlCreating, setShortUrlCreating] = useState(false);
     const [shortUrlCreated, setShortUrlCreated] = useState(false);
     const [shortUrlData, setShortUrlData] = useState<ShortUrlData | null>(null);
+
+    const [resultSummary, setResultSummary] = useState<{
+        proxies: number;
+        groups: number;
+        rules: number;
+    } | null>(null);
+    const [resultHint, setResultHint] = useState<string | null>(null);
 
     const t = useTranslations('ConvertPage');
     const commonT = useTranslations('Common');
@@ -102,6 +111,37 @@ export default function ConvertPage() {
         setShortUrlCreated(false);
         setShortUrlData(null); // Also reset the data
     }, [formData]);
+
+    useEffect(() => {
+        setResultSummary(null);
+        setResultHint(null);
+
+        if (!result || !result.content) {
+            return;
+        }
+
+        if (formData.target !== 'clash' && formData.target !== 'clashr') {
+            return;
+        }
+
+        try {
+            const parsed = yaml.load(result.content) as any;
+            if (!parsed || typeof parsed !== 'object') {
+                return;
+            }
+
+            const proxies = Array.isArray(parsed.proxies) ? parsed.proxies.length : 0;
+            const groups = Array.isArray(parsed['proxy-groups']) ? parsed['proxy-groups'].length : 0;
+            const rules = Array.isArray(parsed.rules) ? parsed.rules.length : 0;
+            setResultSummary({ proxies, groups, rules });
+
+            if (proxies === 0) {
+                setResultHint('Warning: proxies is empty. If you enabled fdn, try disabling it and regenerate.');
+            }
+        } catch {
+            // Keep silent: some targets or outputs are not strict YAML.
+        }
+    }, [result, formData.target]);
 
     const handleResetField = useCallback((fieldName: string) => {
         setFormData(prev => {
@@ -216,18 +256,14 @@ export default function ConvertPage() {
 
     // Generate API URL from form data
     const generateApiUrl = useCallback(() => {
-        // Use Cloudflare Worker URL
-        const baseUrl = process.env.NEXT_PUBLIC_WORKER_URL || 'https://subconverter-worker.testofdrive.workers.dev';
+        const baseUrl = getWorkerUrl();
         const params = new URLSearchParams();
 
         // Add all set fields to the URL params
         Object.entries(formData).forEach(([key, value]) => {
             if (value !== undefined && value !== null && setFields.has(key)) {
                 if (typeof value === 'boolean') {
-                    // For boolean values, just include the parameter name if true
-                    if (value) {
-                        params.append(key, '1');
-                    }
+                    params.append(key, value ? '1' : '0');
                 } else {
                     params.append(key, String(value));
                 }
@@ -852,20 +888,47 @@ export default function ConvertPage() {
                     <div className="p-4 border border-green-400 bg-green-50 rounded-md">
                         <h3 className="text-lg font-semibold text-green-800">{t('resultTitle')}</h3>
                         <p className="text-sm text-gray-600 mb-2">{t('contentTypeLabel')}: {result.content_type}</p>
+                        {resultSummary && (
+                            <p className="text-xs text-gray-700 mb-2 font-mono">
+                                proxies={resultSummary.proxies} groups={resultSummary.groups} rules={resultSummary.rules}
+                            </p>
+                        )}
+                        {resultHint && (
+                            <p className="text-xs text-yellow-800 mb-2">{resultHint}</p>
+                        )}
 
                         {/* API URL Display */}
                         <div className="mb-4 p-3 bg-white border border-gray-300 rounded-md">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-medium text-gray-800">{t('subscriptionUrlDisplay')}</h4>
                                 <button
-                                    onClick={() => navigator.clipboard.writeText(shortUrlData && shortUrlCreated ? shortUrlData.short_url : generateApiUrl())}
+                                    onClick={() => {
+                                        const valueToCopy = shortUrlData && shortUrlCreated
+                                            ? shortUrlData.short_url
+                                            : (() => {
+                                                try {
+                                                    return generateApiUrl();
+                                                } catch {
+                                                    return '';
+                                                }
+                                            })();
+                                        if (valueToCopy) {
+                                            navigator.clipboard.writeText(valueToCopy);
+                                        }
+                                    }}
                                     className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
                                 >
                                     {commonT('copy')}
                                 </button>
                             </div>
                             <p className="text-xs break-all font-mono bg-gray-50 p-2 rounded border border-gray-200">
-                                {shortUrlData && shortUrlCreated ? shortUrlData.short_url : generateApiUrl()}
+                                {shortUrlData && shortUrlCreated ? shortUrlData.short_url : (() => {
+                                    try {
+                                        return generateApiUrl();
+                                    } catch (e) {
+                                        return `Error: ${e instanceof Error ? e.message : String(e)}`;
+                                    }
+                                })()}
                             </p>
                             {shortUrlCreating && (
                                 <p className="text-xs text-blue-500 mt-1">{t('creatingShortUrl')}</p>
@@ -874,6 +937,9 @@ export default function ConvertPage() {
                                 {t('useUrlMessage')}
                                 {saveApiUrl && !shortUrlCreated && !shortUrlCreating && t('urlWillBeSaved')}
                                 {shortUrlCreated && t('shortUrlMessage')}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Note: `fdn` filters deprecated/unsupported nodes for the selected target.
                             </p>
                         </div>
 
