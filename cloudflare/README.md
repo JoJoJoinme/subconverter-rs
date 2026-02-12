@@ -17,6 +17,16 @@ This directory contains the configuration and build scripts for deploying subcon
 
 ## Build and Deploy
 
+### Automatic Deploy (GitHub Actions)
+
+This repository includes `.github/workflows/cloudflare-deploy.yml`.
+It deploys to Cloudflare Workers automatically on push to `main`.
+
+Required repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
 1.  **Build the WASM module:**
 
     From the root of the repository, run:

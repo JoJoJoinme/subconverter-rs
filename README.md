@@ -314,6 +314,12 @@ This command runs:
 
 Reports are generated under `scripts/parity-report/`.
 
+Pushes to `main` also trigger Cloudflare Worker deployment via `.github/workflows/cloudflare-deploy.yml`.
+Set these repository secrets before enabling deployment:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
 ### How to Contribute
 
 1.  **Pick an issue**: Check our [issue tracker](https://github.com/lonelam/subconverter-rs/issues) for tasks labeled `good first issue` or `help wanted`.

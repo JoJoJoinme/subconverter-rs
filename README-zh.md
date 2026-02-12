@@ -91,6 +91,13 @@ python3 scripts/run_parity_suite.py --strict
 - 失败条件：`code-parity` 出现 `PARTIAL`/`FAIL` 或通过数不匹配
 - 每次执行会上传 `scripts/parity-report/` 作为构建产物，便于排查差异
 
+主分支推送后还会自动部署 Cloudflare Worker（`.github/workflows/cloudflare-deploy.yml`）。
+
+需要在仓库 Secrets 中配置：
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
 ---
 
 * * *
