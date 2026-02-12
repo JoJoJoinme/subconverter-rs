@@ -44,6 +44,18 @@ pub async fn import_items(
             } else {
                 file_get_async(&path, None).await?
             }
+        } else if !path.starts_with("base/") {
+            let fallback = format!("base/{}", path);
+            if file_exists(&fallback).await {
+                if scope_limit {
+                    file_get_async(&fallback, Some(base_path)).await?
+                } else {
+                    file_get_async(&fallback, None).await?
+                }
+            } else {
+                log::error!("File not found or not a valid URL: {}", path);
+                return Err(format!("File not found or not a valid URL: {}", path).into());
+            }
         } else {
             log::error!("File not found or not a valid URL: {}", path);
             return Err(format!("File not found or not a valid URL: {}", path).into());

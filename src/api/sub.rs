@@ -437,20 +437,39 @@ pub async fn sub_process(
     builder.sort_script(query.sort_script.unwrap_or(global.sort_script.clone()));
 
     let filter_deprecated = query.fdn.unwrap_or(global.filter_deprecated);
-    debug!("filter_deprecated: {}, query.fdn: {:?}, global.filter_deprecated: {}", filter_deprecated, query.fdn, global.filter_deprecated);
+    debug!(
+        "filter_deprecated: {}, query.fdn: {:?}, global.filter_deprecated: {}",
+        filter_deprecated, query.fdn, global.filter_deprecated
+    );
     builder.filter_deprecated(filter_deprecated);
-    builder.clash_new_field_name(query.new_name.unwrap_or(global.clash_use_new_field));
+    let mut clash_new_field_name = query.new_name.unwrap_or(global.clash_use_new_field);
+    builder.clash_new_field_name(clash_new_field_name);
     builder.clash_script(query.script.unwrap_or_default());
     builder.clash_classical_ruleset(query.classic.unwrap_or_default());
     let nodelist = query.list.unwrap_or_default();
     builder.nodelist(nodelist);
 
+    // Keep managed config prefix when converters need remote ruleset URLs.
+    if !target.is_clash() || query.script == Some(true) {
+        builder.managed_config_prefix(global.managed_config_prefix.clone());
+    }
+
     if arg_expand_rulesets != Some(true) {
-        builder.clash_new_field_name(true);
+        clash_new_field_name = true;
+        builder.clash_new_field_name(clash_new_field_name);
     } else {
         builder.managed_config_prefix(global.managed_config_prefix.clone());
         builder.clash_script(false);
     }
+
+    template_args.local_vars.insert(
+        "clash.new_field_name".to_string(),
+        if clash_new_field_name {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        },
+    );
 
     let mut ruleset_configs = global.custom_rulesets.clone();
     let mut custom_group_configs = global.custom_proxy_groups.clone();
@@ -498,7 +517,9 @@ pub async fn sub_process(
                     builder.rule_bases(rule_bases);
 
                     if let Some(tpl_args) = extconf.tpl_args {
-                        template_args.local_vars = tpl_args;
+                        for (k, v) in tpl_args {
+                            template_args.local_vars.insert(k, v);
+                        }
                     }
 
                     builder.template_args(template_args);
@@ -651,9 +672,8 @@ pub async fn sub_process(
         Ok(result) => {
             // Determine content type based on target
             let content_type = match target {
-                SubconverterTarget::Clash
-                | SubconverterTarget::ClashR
-                | SubconverterTarget::SingBox => "application/yaml",
+                SubconverterTarget::Clash | SubconverterTarget::ClashR => "application/yaml",
+                SubconverterTarget::SingBox => "application/json",
                 SubconverterTarget::SSSub | SubconverterTarget::SSD => "application/json",
                 _ => "text/plain",
             };

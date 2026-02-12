@@ -388,7 +388,8 @@ impl SubconverterConfigBuilder {
 
     /// Set managed config prefix
     pub fn managed_config_prefix(&mut self, prefix: String) -> &mut Self {
-        self.config.managed_config_prefix = prefix;
+        self.config.managed_config_prefix = prefix.clone();
+        self.config.extra.managed_config_prefix = prefix;
         self
     }
 
@@ -1146,17 +1147,24 @@ impl RuleBases {
                     }
                 }
             } else {
-                // Treat as file path
-                match file_get_async(path, None).await {
-                    Ok(content) => {
-                        debug!("Loaded rule base from file: {}", path);
-                        Some(content)
-                    }
-                    Err(e) => {
-                        warn!("Failed to load rule base from file {}: {}", path, e);
-                        None
+                // Treat as file path, then try base/ fallback.
+                let candidate_paths = [path.to_string(), format!("base/{path}")];
+                for candidate in candidate_paths {
+                    match file_get_async(&candidate, None).await {
+                        Ok(content) => {
+                            debug!("Loaded rule base from file: {}", candidate);
+                            return Some(content);
+                        }
+                        Err(e) => {
+                            debug!("Failed to load rule base from file {}: {}", candidate, e);
+                        }
                     }
                 }
+                warn!(
+                    "Failed to load rule base from file {} and base fallback",
+                    path
+                );
+                None
             }
         };
 
@@ -1235,17 +1243,24 @@ impl RuleBases {
                     }
                 }
             } else {
-                // Treat as file path
-                match file_get_async(path, None).await {
-                    Ok(content) => {
-                        debug!("Loaded rule base from file: {}", path);
-                        content
-                    }
-                    Err(e) => {
-                        warn!("Failed to load rule base from file {}: {}", path, e);
-                        String::new()
+                // Treat as file path, then try base/ fallback.
+                let candidate_paths = [path.to_string(), format!("base/{path}")];
+                for candidate in candidate_paths {
+                    match file_get_async(&candidate, None).await {
+                        Ok(content) => {
+                            debug!("Loaded rule base from file: {}", candidate);
+                            return content;
+                        }
+                        Err(e) => {
+                            debug!("Failed to load rule base from file {}: {}", candidate, e);
+                        }
                     }
                 }
+                warn!(
+                    "Failed to load rule base from file {} and base fallback",
+                    path
+                );
+                String::new()
             }
         };
 

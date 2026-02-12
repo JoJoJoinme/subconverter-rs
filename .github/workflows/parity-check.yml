@@ -1,0 +1,42 @@
+name: Parity Check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binary
+        run: cargo build --release --features web-api --bin subconverter-rs
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Download original subconverter release
+        run: |
+          mkdir -p /tmp/subconverter-release
+          curl -L "https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz" -o /tmp/subconverter-release/subconverter_linux64.tar.gz
+          tar -xzf /tmp/subconverter-release/subconverter_linux64.tar.gz -C /tmp/subconverter-release
+
+      - name: Run strict parity suite
+        run: python3 scripts/run_parity_suite.py --strict
+
+      - name: Upload parity reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-reports
+          path: scripts/parity-report/

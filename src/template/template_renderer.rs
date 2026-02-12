@@ -7,6 +7,7 @@ use minijinja::{
     Value,
 };
 use serde::Serialize;
+use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::collections::HashMap;
 
 /// Template arguments container
@@ -72,16 +73,14 @@ pub fn render_template(
     // env.add_function("fetch", fn_web_get);
 
     // Build context object
-    let mut global_vars = HashMap::new();
-    for (key, value) in &args.global_vars {
-        global_vars.insert(key.clone(), value.clone());
-    }
+    let global_vars = expand_dotted_vars(&args.global_vars);
+    let local_vars = expand_dotted_vars(&args.local_vars);
 
     // Create full context with all variables
     let context = context!(
         global => global_vars,
         request => args.request_params,
-        local => args.local_vars,
+        local => local_vars,
         node_list => args.node_list
     );
 
@@ -103,6 +102,37 @@ pub fn render_template(
             Err(Box::new(e))
         }
     }
+}
+
+fn expand_dotted_vars(vars: &HashMap<String, String>) -> JsonValue {
+    fn insert_path(root: &mut JsonMap<String, JsonValue>, key: &str, value: &str) {
+        let mut parts = key.split('.').filter(|p| !p.is_empty()).peekable();
+        if parts.peek().is_none() {
+            return;
+        }
+
+        let mut current = root;
+        while let Some(part) = parts.next() {
+            if parts.peek().is_none() {
+                current.insert(part.to_string(), JsonValue::String(value.to_string()));
+                return;
+            }
+
+            let next = current
+                .entry(part.to_string())
+                .or_insert_with(|| JsonValue::Object(JsonMap::new()));
+            if !next.is_object() {
+                *next = JsonValue::Object(JsonMap::new());
+            }
+            current = next.as_object_mut().expect("object just inserted");
+        }
+    }
+
+    let mut root = JsonMap::new();
+    for (k, v) in vars {
+        insert_path(&mut root, k, v);
+    }
+    JsonValue::Object(root)
 }
 
 /// Render a template from a file with the given arguments

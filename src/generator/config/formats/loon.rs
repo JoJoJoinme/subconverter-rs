@@ -293,7 +293,7 @@ pub async fn proxy_to_loon(
         if ext.nodelist {
             output_nodelist.push_str(&format!("{} = {}\n", remark, proxy));
         } else {
-            ini.set("{NONAME}", &format!("{} = {}", remark, proxy), "")
+            ini.set_current("{NONAME}", &format!("{} = {}", remark, proxy))
                 .unwrap_or(());
             nodelist.push(node.clone());
             remarks_list.push(remark);
@@ -326,7 +326,7 @@ pub async fn proxy_to_loon(
                 }
                 group_str = format!("{},default={},", group.type_str(), group.proxies[0]);
                 group_str.push_str(&join(&group.proxies[1..], ","));
-                ini.set("{NONAME}", &format!("{} = {}", group.name, group_str), "")
+                ini.set_current("{NONAME}", &format!("{} = {}", group.name, group_str))
                     .unwrap_or(());
                 continue;
             }
@@ -392,7 +392,7 @@ pub async fn proxy_to_loon(
             group_str.push_str(&format!(",{}", img_url));
         }
 
-        ini.set("{NONAME}", &format!("{} = {}", group.name, group_str), "")
+        ini.set_current("{NONAME}", &format!("{} = {}", group.name, group_str))
             .unwrap_or(());
     }
 

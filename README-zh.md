@@ -60,11 +60,45 @@ cargo build --release --features=web-api
 
 ---
 
+## ✅ 兼容性校验（与原版对齐）
+
+为尽可能保证 Rust 版本与 C++ 原版行为一致，建议在开发时执行：
+
+```bash
+python3 scripts/run_parity_suite.py --strict
+```
+
+该命令会依次运行：
+
+- `code-parity`：同资源下的代码语义兼容性门禁
+- `repo-parity`：当前仓库资源下的行为快照
+- `resource-diff`：资源文件差异报告
+
+报告默认输出到 `scripts/parity-report/`。
+
+常用结果路径：
+
+- `scripts/parity-report/code/compat_report.md`（代码兼容性门禁）
+- `scripts/parity-report/repo/compat_report.md`（仓库资源快照）
+- `scripts/parity-report/resources/resource_diff.md`（资源差异）
+- `scripts/parity-report/suite/summary.md`（一键执行总览）
+
+### CI 说明
+
+仓库已接入 GitHub Actions 工作流：`.github/workflows/parity-check.yml`。
+
+- PR 会自动执行严格校验（等价于 `python3 scripts/run_parity_suite.py --strict`）
+- 失败条件：`code-parity` 出现 `PARTIAL`/`FAIL` 或通过数不匹配
+- 每次执行会上传 `scripts/parity-report/` 作为构建产物，便于排查差异
+
+---
+
 * * *
 
 ## 📋 目录
 
 - [特性概览](#特性概览)
+- [兼容性校验](#-兼容性校验与原版对齐)
 - [支持类型](#支持类型)
 - [简易用法](#简易用法)
 - [进阶用法](#进阶用法)

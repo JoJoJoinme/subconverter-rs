@@ -298,6 +298,22 @@ subconverter -g
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### Parity Verification
+
+To keep behavior aligned with the original C++ subconverter, run the parity suite:
+
+```bash
+python3 scripts/run_parity_suite.py --strict
+```
+
+This command runs:
+
+- `code-parity` (same release resources, code-level compatibility gate)
+- `repo-parity` (current repository resource behavior snapshot)
+- `resource-diff` (resource drift report)
+
+Reports are generated under `scripts/parity-report/`.
+
 ### How to Contribute
 
 1.  **Pick an issue**: Check our [issue tracker](https://github.com/lonelam/subconverter-rs/issues) for tasks labeled `good first issue` or `help wanted`.

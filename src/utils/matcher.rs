@@ -145,6 +145,16 @@ pub fn apply_matcher(rule: &str, real_rule: &mut String, node: &Proxy) -> bool {
                 features.push_str("NONE");
             }
 
+            // SECURITY matcher treats comma-separated values as OR conditions.
+            // Example: "TLS,TLS13" matches features containing either TLS or TLS13.
+            if target.contains(',') {
+                return target
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .any(|s| reg_find(&features, s));
+            }
+
             return reg_find(&features, target);
         }
     } else if rule.starts_with("!!REMARKS=") {
@@ -389,7 +399,18 @@ pub fn compile_rule(rule: &str) -> CompiledRule {
     } else if let Some(captures) = SECURITY_REGEX.captures(rule) {
         sub_rule_str = captures.get(2).map(|m| m.as_str());
         let target = captures.get(1).map_or("", |m| m.as_str());
-        Regex::new(&format!("(?i){}", target))
+        // Keep consistency with apply_matcher: commas represent OR.
+        let normalized = if target.contains(',') {
+            target
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("|")
+        } else {
+            target.to_string()
+        };
+        Regex::new(&format!("(?i){}", normalized))
             .map(CompiledMatcher::Security)
             .unwrap_or(CompiledMatcher::Invalid)
     } else if let Some(captures) = REMARKS_REGEX.captures(rule) {
@@ -411,7 +432,27 @@ pub fn compile_rule(rule: &str) -> CompiledRule {
 
     let sub_rule = sub_rule_str
         .filter(|s| !s.is_empty()) // Only compile non-empty sub-rules
-        .map(|s| Box::new(compile_rule(s)));
+        .map(|s| {
+            let needs_prefix = s.starts_with("GROUP=")
+                || s.starts_with("GROUPID=")
+                || s.starts_with("INSERT=")
+                || s.starts_with("TYPE=")
+                || s.starts_with("PORT=")
+                || s.starts_with("SERVER=")
+                || s.starts_with("PROTOCOL=")
+                || s.starts_with("UDPSUPPORT=")
+                || s.starts_with("SECURITY=")
+                || s.starts_with("REMARKS=");
+
+            let normalized = if s.starts_with("!!") {
+                s.to_string()
+            } else if needs_prefix {
+                format!("!!{}", s)
+            } else {
+                s.to_string()
+            };
+            Box::new(compile_rule(&normalized))
+        });
 
     CompiledRule { matcher, sub_rule }
 }

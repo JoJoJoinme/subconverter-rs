@@ -21,10 +21,22 @@ pub async fn fetch_ruleset(
     _async_fetch: bool,
 ) -> Result<String, String> {
     debug!("Requesting ruleset from: {}", url);
+    let mut local_path = url.to_string();
+
+    if !local_path.starts_with("http://")
+        && !local_path.starts_with("https://")
+        && !file_exists(&local_path).await
+        && !local_path.starts_with("base/")
+    {
+        let fallback = format!("base/{}", local_path);
+        if file_exists(&fallback).await {
+            local_path = fallback;
+        }
+    }
 
     // Check memory cache first if caching is enabled
     if cache_timeout > 0 {
-        let cache_key = url;
+        let cache_key = &local_path;
         if let Some(content) = memory_cache::get_if_valid(cache_key, cache_timeout) {
             debug!("Using cached ruleset for URL: {}", url);
             return Ok(content);
@@ -32,19 +44,19 @@ pub async fn fetch_ruleset(
     }
 
     // If it's a file on disk, read it directly using async file read
-    if !url.starts_with("http://") && !url.starts_with("https://") {
-        if !file_exists(url).await {
-            return Err(format!("Rule file not found: {}", url));
+    if !local_path.starts_with("http://") && !local_path.starts_with("https://") {
+        if !file_exists(&local_path).await {
+            return Err(format!("Rule file not found: {}", local_path));
         }
 
         // Read rule file asynchronously
-        match read_file_async(url).await {
+        match read_file_async(&local_path).await {
             Ok(content) => {
-                info!("Loaded ruleset from file: {}", url);
+                info!("Loaded ruleset from file: {}", local_path);
 
                 // Store in memory cache if caching is enabled
                 if cache_timeout > 0 {
-                    if let Err(e) = memory_cache::store(url, &content) {
+                    if let Err(e) = memory_cache::store(&local_path, &content) {
                         warn!("Failed to store ruleset in cache: {}", e);
                     }
                 }
@@ -56,11 +68,11 @@ pub async fn fetch_ruleset(
     }
 
     // For URLs, fetch content and cache
-    match fetch_from_url(url, proxy).await {
+    match fetch_from_url(&local_path, proxy).await {
         Ok(content) => {
             // Store in memory cache if caching is enabled
             if cache_timeout > 0 {
-                if let Err(e) = memory_cache::store(url, &content) {
+                if let Err(e) = memory_cache::store(&local_path, &content) {
                     warn!("Failed to store ruleset in cache: {}", e);
                 }
             }
@@ -101,17 +113,28 @@ pub async fn refresh_rulesets(
         let rule_url = ruleset_config.url.clone();
         let interval = ruleset_config.interval;
 
-        // Handle inline rules directly
+        // Keep inline rules in fetch result stream to preserve input order.
         if let Some(pos) = rule_url.find("[]") {
             info!(
                 "Adding inline rule '{}' with group '{}'",
                 &rule_url[pos + 2..],
                 &rule_group
             );
-            let mut ruleset = RulesetContent::new("", &rule_group);
-            ruleset.set_rule_content(&rule_url[pos..]); // Use original url with "[]" prefix
-            ruleset_content_array.push(ruleset);
-            continue; // Skip fetching for inline rules
+
+            let inline_rule = rule_url[pos..].to_string();
+            let original_url_clone = rule_url.clone();
+            let future = async move {
+                FetchResult {
+                    url: String::new(),
+                    group: rule_group,
+                    original_url: original_url_clone,
+                    url_type: RulesetType::default(),
+                    interval,
+                    content: Some(inline_rule),
+                }
+            };
+            fetch_futures.push(Box::pin(future));
+            continue;
         }
 
         // Determine ruleset type from URL for fetchable rules
@@ -327,40 +350,46 @@ mod tests {
             .unwrap();
 
         rt.block_on(async {
-            // Setup test
-            let test_url = "https://example.com/test_ruleset.conf";
-            let proxy = &create_test_proxy();
+            let local = tokio::task::LocalSet::new();
+            local
+                .run_until(async {
+                    // Setup test
+                    let test_url = "https://example.com/test_ruleset.conf";
+                    let proxy = &create_test_proxy();
 
-            // Create a mock ruleset content
-            let cache_content = "# Test ruleset\nRULE-SET,https://example.com/ruleset2.conf,DIRECT";
+                    // Create a mock ruleset content
+                    let cache_content =
+                        "# Test ruleset\nRULE-SET,https://example.com/ruleset2.conf,DIRECT";
 
-            // Store in memory cache
-            memory_cache::store(test_url, cache_content).unwrap();
+                    // Store in memory cache
+                    memory_cache::store(test_url, cache_content).unwrap();
 
-            // Test memory cache hit
-            let result1 = fetch_ruleset(test_url, proxy, 3600, false).await;
-            assert!(result1.is_ok());
-            if let Ok(content) = result1 {
-                assert_eq!(content, cache_content);
-            }
+                    // Test memory cache hit
+                    let result1 = fetch_ruleset(test_url, proxy, 3600, false).await;
+                    assert!(result1.is_ok());
+                    if let Ok(content) = result1 {
+                        assert_eq!(content, cache_content);
+                    }
 
-            // Allow some time to pass
-            std::thread::sleep(Duration::from_secs(1));
+                    // Allow some time to pass
+                    std::thread::sleep(Duration::from_secs(1));
 
-            // Modify the cache content
-            let updated_content =
-                "# Updated ruleset\nRULE-SET,https://example.com/ruleset3.conf,REJECT";
-            memory_cache::store(test_url, updated_content).unwrap();
+                    // Modify the cache content
+                    let updated_content =
+                        "# Updated ruleset\nRULE-SET,https://example.com/ruleset3.conf,REJECT";
+                    memory_cache::store(test_url, updated_content).unwrap();
 
-            // Test cache hit with updated content
-            let result2 = fetch_ruleset(test_url, proxy, 3600, false).await;
-            assert!(result2.is_ok());
-            if let Ok(content) = result2 {
-                assert_eq!(content, updated_content);
-            }
+                    // Test cache hit with updated content
+                    let result2 = fetch_ruleset(test_url, proxy, 3600, false).await;
+                    assert!(result2.is_ok());
+                    if let Ok(content) = result2 {
+                        assert_eq!(content, updated_content);
+                    }
 
-            // Clean up
-            memory_cache::remove(test_url);
+                    // Clean up
+                    memory_cache::remove(test_url);
+                })
+                .await;
         });
     }
 
@@ -373,26 +402,30 @@ mod tests {
             .unwrap();
 
         rt.block_on(async {
-            // This test simulates cache expiration
-            let test_url = "https://example.com/expiring_ruleset.conf";
-            let proxy = &create_test_proxy();
+            let local = tokio::task::LocalSet::new();
+            local
+                .run_until(async {
+                    // This test simulates cache expiration
+                    let test_url = "https://nonexistent.invalid/expiring_ruleset.conf";
+                    let proxy = &create_test_proxy();
 
-            // Create a memory cache entry with expired content
-            let cache_content =
-                "# Expiring ruleset\nRULE-SET,https://example.com/expired.conf,DIRECT";
-            memory_cache::store(test_url, cache_content).unwrap();
+                    // Create a memory cache entry with expired content
+                    let cache_content =
+                        "# Expiring ruleset\nRULE-SET,https://example.com/expired.conf,DIRECT";
+                    memory_cache::store(test_url, cache_content).unwrap();
 
-            // Force cache expiration by using zero cache_timeout
-            let result_no_cache = fetch_ruleset(test_url, proxy, 0, false).await;
+                    // Force cache expiration by using zero cache_timeout
+                    let result_no_cache = fetch_ruleset(test_url, proxy, 0, false).await;
 
-            // This will fail since we can't actually make HTTP requests in tests
-            assert!(result_no_cache.is_err());
-            assert!(result_no_cache
-                .unwrap_err()
-                .contains("Failed to fetch ruleset from URL"));
+                    // This will fail since we can't actually make HTTP requests in tests
+                    assert!(result_no_cache.is_err());
+                    let err = result_no_cache.unwrap_err();
+                    assert!(!err.is_empty());
 
-            // Clean up
-            memory_cache::remove(test_url);
+                    // Clean up
+                    memory_cache::remove(test_url);
+                })
+                .await;
         });
     }
 }

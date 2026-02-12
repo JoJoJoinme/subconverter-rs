@@ -46,6 +46,10 @@ pub fn group_generate(
                 }
             }
         }
+
+        if filtered_nodelist.is_empty() && add_direct {
+            filtered_nodelist.push("DIRECT".to_string());
+        }
     }
 }
 

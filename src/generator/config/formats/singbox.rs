@@ -178,7 +178,9 @@ pub fn proxy_to_singbox(
                     "SingBox base loader failed with error: {}, base_conf: {}",
                     e, base_conf
                 );
-                return String::new();
+                // Fall back to an empty object and continue generating a valid
+                // sing-box configuration instead of returning an empty output.
+                json!({})
             }
         }
     };
@@ -490,9 +492,10 @@ pub fn proxy_to_singbox(
                 let mut tls = Map::new();
                 tls.insert("enabled".to_string(), JsonValue::Bool(true));
 
-                if let Some(allow_insecure) = scv {
-                    tls.insert("insecure".to_string(), JsonValue::Bool(allow_insecure));
-                }
+                tls.insert(
+                    "insecure".to_string(),
+                    JsonValue::Bool(scv.unwrap_or(false)),
+                );
 
                 if !node.alpn.is_empty() && node.alpn.len() > 0 {
                     let alpn = vec![JsonValue::String(node.alpn.iter().next().unwrap().clone())];
@@ -561,9 +564,10 @@ pub fn proxy_to_singbox(
                 let mut tls = Map::new();
                 tls.insert("enabled".to_string(), JsonValue::Bool(true));
 
-                if let Some(allow_insecure) = scv {
-                    tls.insert("insecure".to_string(), JsonValue::Bool(allow_insecure));
-                }
+                tls.insert(
+                    "insecure".to_string(),
+                    JsonValue::Bool(scv.unwrap_or(false)),
+                );
 
                 if !node.alpn.is_empty() && node.alpn.len() > 0 {
                     let alpn = vec![JsonValue::String(node.alpn.iter().next().unwrap().clone())];
@@ -640,9 +644,10 @@ pub fn proxy_to_singbox(
             }
 
             // Add insecure option
-            if let Some(allow_insecure) = scv {
-                tls.insert("insecure".to_string(), JsonValue::Bool(allow_insecure));
-            }
+            tls.insert(
+                "insecure".to_string(),
+                JsonValue::Bool(scv.unwrap_or(false)),
+            );
 
             proxy_obj.insert("tls".to_string(), JsonValue::Object(tls));
         }

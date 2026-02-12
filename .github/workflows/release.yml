@@ -88,7 +88,7 @@ jobs:
     - name: Prepare artifact
       run: |
         mkdir -p subconverter/
-        cp target/${{ matrix.target }}/release/subconverter subconverter/
+        cp target/${{ matrix.target }}/release/subconverter-rs subconverter/
         cp -r base/* subconverter/
         
     - name: Upload artifact
@@ -167,7 +167,7 @@ jobs:
     - name: Prepare artifact
       run: |
         mkdir -p subconverter/
-        cp target/${{ matrix.target }}/release/subconverter subconverter/
+        cp target/${{ matrix.target }}/release/subconverter-rs subconverter/
         cp -r base/* subconverter/
         
     - name: Upload artifact
@@ -246,7 +246,7 @@ jobs:
       shell: bash
       run: |
         mkdir -p subconverter/
-        cp target/${{ matrix.target }}/release/subconverter.exe subconverter/
+        cp target/${{ matrix.target }}/release/subconverter-rs.exe subconverter/
         cp -r base/* subconverter/
         
     - name: Upload artifact

@@ -82,7 +82,9 @@ impl From<Proxy> for ShadowsocksProxy {
                 }
             }
 
-            ss.plugin_opts = Some(opts);
+            if !opts.is_empty() {
+                ss.plugin_opts = Some(opts);
+            }
         }
 
         // Map combined_proxy fields if available

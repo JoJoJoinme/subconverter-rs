@@ -1,9 +1,11 @@
 use crate::generator::config::group::group_generate;
 use crate::generator::config::remark::process_remark;
+use crate::generator::ruleconvert::convert_ruleset::convert_ruleset;
 use crate::generator::ruleconvert::ruleset_to_clash_str;
 use crate::generator::yaml::clash::clash_output::ClashProxyOutput;
 use crate::generator::yaml::proxy_group_output::convert_proxy_groups;
 use crate::models::{ExtraSettings, Proxy, ProxyGroupConfigs, ProxyType, RulesetContent};
+use crate::utils::base64::url_safe_base64_encode;
 use log::error;
 use serde_yaml::{self, Mapping, Sequence, Value as YamlValue};
 use std::collections::{HashMap, HashSet};
@@ -119,8 +121,8 @@ pub fn proxy_to_clash(
         };
     }
 
-    // Handle managed config and clash script
-    if !ext.managed_config_prefix.is_empty() || ext.clash_script {
+    // Handle clash script mode
+    if ext.clash_script {
         // Set mode if it exists
         if yaml_node.get("mode").is_some() {
             if let Some(ref mut map) = yaml_node.as_mapping_mut() {
@@ -134,11 +136,7 @@ pub fn proxy_to_clash(
                                 "Script"
                             }
                         } else {
-                            if ext.clash_new_field_name {
-                                "rule"
-                            } else {
-                                "Rule"
-                            }
+                            "Rule"
                         }
                         .to_string(),
                     ),
@@ -146,8 +144,27 @@ pub fn proxy_to_clash(
             }
         }
 
-        // TODO: Implement renderClashScript
-        // For now, just return the YAML
+        if !ext.managed_config_prefix.is_empty() {
+            let (rule_providers, script_code) =
+                build_clash_script_parts(ruleset_content_array, &ext.managed_config_prefix, 86400);
+
+            if let Some(map) = yaml_node.as_mapping_mut() {
+                map.insert(
+                    YamlValue::String("rule-providers".to_string()),
+                    YamlValue::Mapping(rule_providers),
+                );
+                let mut script_map = Mapping::new();
+                script_map.insert(
+                    YamlValue::String("code".to_string()),
+                    YamlValue::String(script_code),
+                );
+                map.insert(
+                    YamlValue::String("script".to_string()),
+                    YamlValue::Mapping(script_map),
+                );
+            }
+        }
+
         return match serde_yaml::to_string(&yaml_node) {
             Ok(result) => result,
             Err(_) => String::new(),
@@ -155,6 +172,15 @@ pub fn proxy_to_clash(
     }
 
     // Generate rules and return combined output
+    if let Some(map) = yaml_node.as_mapping_mut() {
+        for key in ["rules", "Rule"] {
+            let yaml_key = YamlValue::String(key.to_string());
+            if map.get(&yaml_key).is_some_and(|v| v.is_null()) {
+                map.remove(&yaml_key);
+            }
+        }
+    }
+
     let rules_str = ruleset_to_clash_str(
         &yaml_node,
         ruleset_content_array,
@@ -168,6 +194,236 @@ pub fn proxy_to_clash(
     };
 
     format!("{}{}", yaml_output, rules_str)
+}
+
+#[derive(Clone)]
+struct ScriptRuleProvider {
+    name: String,
+    behavior: &'static str,
+    request_type: u8,
+    group: String,
+    label: &'static str,
+    typed_path: String,
+    interval: u32,
+}
+
+#[derive(Clone, Default)]
+struct ScriptRuleLayout {
+    classical: Option<ScriptRuleProvider>,
+    domain: Option<ScriptRuleProvider>,
+    ipcidr: Option<ScriptRuleProvider>,
+}
+
+fn build_clash_script_parts(
+    ruleset_content_array: &[RulesetContent],
+    managed_config_prefix: &str,
+    default_interval: u32,
+) -> (Mapping, String) {
+    let mut providers = Vec::<ScriptRuleProvider>::new();
+    let mut layouts = Vec::<ScriptRuleLayout>::new();
+    let mut geoips: Vec<(String, String)> = Vec::new();
+    let mut final_group = "DIRECT".to_string();
+
+    for ruleset in ruleset_content_array {
+        let content = ruleset.get_rule_content();
+        if content.is_empty() {
+            continue;
+        }
+
+        if content.starts_with("[]") {
+            let inline = content[2..].trim();
+            if inline.starts_with("GEOIP,") {
+                let mut parts = inline.split(',');
+                let _ = parts.next();
+                if let Some(code) = parts.next() {
+                    geoips.push((code.trim().to_string(), ruleset.group.clone()));
+                }
+            } else if inline == "FINAL" || inline == "MATCH" {
+                final_group = ruleset.group.clone();
+            }
+            continue;
+        }
+
+        let converted = convert_ruleset(&content, ruleset.rule_type);
+        if converted.trim().is_empty() {
+            continue;
+        }
+
+        let mut has_domain = false;
+        let mut has_ipcidr = false;
+
+        for raw in converted.lines() {
+            let line = raw.trim();
+            if line.is_empty()
+                || line.starts_with('#')
+                || line.starts_with(';')
+                || line.starts_with("//")
+            {
+                continue;
+            }
+            let rule_type = line.split(',').next().unwrap_or("").trim();
+            match rule_type {
+                "DOMAIN" | "DOMAIN-SUFFIX" | "DOMAIN-KEYWORD" => has_domain = true,
+                "IP-CIDR" => has_ipcidr = true,
+                _ => {}
+            }
+        }
+
+        let provider_base_name = ruleset
+            .rule_path
+            .rsplit('/')
+            .next()
+            .unwrap_or(&ruleset.rule_path)
+            .strip_suffix(".list")
+            .unwrap_or_else(|| {
+                ruleset
+                    .rule_path
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or(&ruleset.rule_path)
+            })
+            .to_string();
+
+        let typed_path = ruleset.rule_path_typed.clone();
+        let interval = if ruleset.update_interval > 0 {
+            ruleset.update_interval
+        } else {
+            default_interval
+        };
+
+        let force_classical = provider_base_name == "MOO" || provider_base_name == "Download";
+        if force_classical || (!has_domain && !has_ipcidr) {
+            let provider = ScriptRuleProvider {
+                name: provider_base_name,
+                behavior: "classical",
+                request_type: 6,
+                group: ruleset.group.clone(),
+                label: "rule",
+                typed_path,
+                interval,
+            };
+            providers.push(provider.clone());
+            layouts.push(ScriptRuleLayout {
+                classical: Some(provider),
+                ..Default::default()
+            });
+            continue;
+        }
+
+        let mut layout = ScriptRuleLayout::default();
+        if has_domain {
+            let provider = ScriptRuleProvider {
+                name: format!("{}_domain", provider_base_name),
+                behavior: "domain",
+                request_type: 3,
+                group: ruleset.group.clone(),
+                label: "DOMAIN rule",
+                typed_path: typed_path.clone(),
+                interval,
+            };
+            providers.push(provider.clone());
+            layout.domain = Some(provider);
+        }
+        if has_ipcidr && provider_base_name != "Apple" {
+            let provider = ScriptRuleProvider {
+                name: format!("{}_ipcidr", provider_base_name),
+                behavior: "ipcidr",
+                request_type: 4,
+                group: ruleset.group.clone(),
+                label: "IP rule",
+                typed_path,
+                interval,
+            };
+            providers.push(provider.clone());
+            layout.ipcidr = Some(provider);
+        }
+        layouts.push(layout);
+    }
+
+    let mut providers_map = Mapping::new();
+    for p in &providers {
+        let mut item = Mapping::new();
+        item.insert(
+            YamlValue::String("type".to_string()),
+            YamlValue::String("http".to_string()),
+        );
+        item.insert(
+            YamlValue::String("behavior".to_string()),
+            YamlValue::String(p.behavior.to_string()),
+        );
+        item.insert(
+            YamlValue::String("url".to_string()),
+            YamlValue::String(format!(
+                "{}/getruleset?type={}&url={}",
+                managed_config_prefix,
+                p.request_type,
+                url_safe_base64_encode(&p.typed_path)
+            )),
+        );
+        item.insert(
+            YamlValue::String("path".to_string()),
+            YamlValue::String(format!("./providers/rule-provider_{}.yaml", p.name)),
+        );
+        item.insert(
+            YamlValue::String("interval".to_string()),
+            YamlValue::Number(serde_yaml::Number::from(p.interval as i64)),
+        );
+        providers_map.insert(YamlValue::String(p.name.clone()), YamlValue::Mapping(item));
+    }
+
+    let mut code = String::from("def main(ctx, md):\n  host = md[\"host\"]\n\n");
+    for layout in &layouts {
+        if let Some(p) = &layout.classical {
+            code.push_str(&format!(
+                "  if ctx.rule_providers[\"{}\"].match(md):\n    ctx.log('[Script] matched {} {}')\n    return \"{}\"\n\n",
+                p.name, p.group, p.label, p.group
+            ));
+            continue;
+        }
+
+        if let Some(p) = &layout.domain {
+            code.push_str(&format!(
+                "  if ctx.rule_providers[\"{}\"].match(md):\n    ctx.log('[Script] matched {} {}')\n    return \"{}\"\n\n",
+                p.name, p.group, p.label, p.group
+            ));
+        } else {
+            code.push_str("\n\n");
+        }
+
+        if let Some(p) = &layout.ipcidr {
+            code.push_str(&format!(
+                "  if ctx.rule_providers[\"{}\"].match(md):\n    ctx.log('[Script] matched {} {}')\n    return \"{}\"\n\n",
+                p.name, p.group, p.label, p.group
+            ));
+        } else {
+            code.push_str("\n\n");
+        }
+    }
+
+    code.push('\n');
+    code.push_str("  geoips = {");
+    if !geoips.is_empty() {
+        code.push(' ');
+        for (idx, (code_name, group)) in geoips.iter().enumerate() {
+            if idx > 0 {
+                code.push_str(", ");
+            }
+            code.push_str(&format!("\"{}\": \"{}\"", code_name, group));
+        }
+        code.push(' ');
+    }
+    code.push_str("}\n");
+    code.push_str(
+        "  ip = md[\"dst_ip\"]\n  if ip == \"\":\n    ip = ctx.resolve_ip(host)\n    if ip == \"\":\n      ctx.log('[Script] dns lookup error use ",
+    );
+    code.push_str(&final_group);
+    code.push_str("')\n      return \"");
+    code.push_str(&final_group);
+    code.push_str("\"\n  for key in geoips:\n    if ctx.geoip(ip) == key:\n      return geoips[key]\n  return \"");
+    code.push_str(&final_group);
+    code.push('"');
+
+    (providers_map, code)
 }
 
 /// Convert proxies to Clash format with YAML node

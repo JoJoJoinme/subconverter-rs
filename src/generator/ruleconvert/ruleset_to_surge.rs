@@ -197,7 +197,22 @@ pub async fn ruleset_to_surge(
                 continue;
             }
 
-            if file_exists(rule_path).await {
+            let mut local_rule_path = rule_path.to_string();
+            let is_local_rule_file = if file_exists(&local_rule_path).await {
+                true
+            } else if !starts_with(&local_rule_path, "base/") {
+                let fallback = format!("base/{}", local_rule_path);
+                if file_exists(&fallback).await {
+                    local_rule_path = fallback;
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if is_local_rule_file {
                 if surge_ver > 2 && !remote_path_prefix.is_empty() {
                     let mut str_line = format!(
                         "RULE-SET,{}/getruleset?type=1&url={},{}",
@@ -282,7 +297,7 @@ pub async fn ruleset_to_surge(
                     let _ = base_rule.set("Remote Rule", "{NONAME}", &str_line);
                     continue;
                 }
-            } else {
+            } else if !is_local_rule_file {
                 continue;
             }
 

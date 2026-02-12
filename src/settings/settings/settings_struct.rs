@@ -314,7 +314,7 @@ impl Default for Settings {
             // Generator settings
             generator_mode: false,
             generate_profiles: String::new(),
-            prepend_proxy_direct_ruleset: true,
+            prepend_proxy_direct_ruleset: false,
 
             // Preferences
             reload_conf_on_request: false,

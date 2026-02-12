@@ -44,11 +44,6 @@ where
             // Add strategy for load balancing
             map.serialize_entry("strategy", &group.strategy_str())?;
 
-            // If not lazy, include the flag (false is default, so omit if true)
-            if !group.lazy {
-                map.serialize_entry("lazy", &group.lazy)?;
-            }
-
             // Add URL test fields
             map.serialize_entry("url", &group.url)?;
 
@@ -61,11 +56,6 @@ where
             }
         }
         ProxyGroupType::Smart | ProxyGroupType::URLTest => {
-            // If not lazy, include the flag (true is default, so only include if false)
-            if !group.lazy {
-                map.serialize_entry("lazy", &group.lazy)?;
-            }
-
             // Add URL test fields
             map.serialize_entry("url", &group.url)?;
 
@@ -168,7 +158,7 @@ pub struct ClashProxyGroup {
     pub strategy: String,
 
     /// Whether to use lazy loading
-    #[serde(skip_serializing_if = "is_true")]
+    #[serde(skip_serializing_if = "is_false")]
     pub lazy: bool,
 
     /// Whether to disable UDP support
@@ -217,7 +207,7 @@ impl From<&ProxyGroupConfig> for ClashProxyGroup {
             timeout: 0,
             tolerance: 0,
             strategy: String::new(),
-            lazy: true, // Default to true
+            lazy: false,
             disable_udp: config.disable_udp,
             persistent: config.persistent,
             evaluate_before_use: config.evaluate_before_use,

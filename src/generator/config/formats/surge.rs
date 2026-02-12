@@ -561,7 +561,7 @@ pub async fn proxy_to_surge(
         if ext.nodelist {
             output_nodelist.push_str(&format!("{} = {}\n", remark, _proxy));
         } else {
-            ini.set("{NONAME}", &format!("{} = {}", remark, _proxy), "")
+            ini.set_current("{NONAME}", &format!("{} = {}", remark, _proxy))
                 .unwrap_or(());
             nodelist.push(node.clone());
         }
@@ -596,7 +596,7 @@ pub async fn proxy_to_surge(
             ProxyGroupType::SSID => {
                 _group_str = format!("{},default={},", group.type_str(), group.proxies[0]);
                 _group_str.push_str(&join(&group.proxies[1..], ","));
-                ini.set("{NONAME}", &format!("{} = {}", group.name, _group_str), "")
+                ini.set_current("{NONAME}", &format!("{} = {}", group.name, _group_str))
                     .unwrap_or(());
                 continue;
             }
@@ -657,7 +657,7 @@ pub async fn proxy_to_surge(
             }
         }
 
-        ini.set("{NONAME}", &format!("{} = {}", group.name, _group_str), "")
+        ini.set_current("{NONAME}", &format!("{} = {}", group.name, _group_str))
             .unwrap_or(());
     }
 

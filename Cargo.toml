@@ -16,7 +16,8 @@ js-runtime = ["rquickjs"]
 cloudflare = []
 
 [[bin]]
-name = "subconverter"
+name = "subconverter-rs"
+path = "src/main.rs"
 required-features = ["web-api"]
 
 [dependencies]
@@ -27,6 +28,7 @@ log = "0.4.21"
 regex = { version = "1.10.4", features = ["unicode-perl"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.135"
+serde_urlencoded = "0.7.1"
 toml = "0.8.14"
 url = "2.5.4"
 urlencoding = "2.1.3"
