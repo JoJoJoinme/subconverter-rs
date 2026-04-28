@@ -117,13 +117,16 @@ export async function convertSubscription(formData: Partial<SubconverterFormPara
     console.log("Sending conversion request with payload:", payload);
 
     const API_URL = getWorkerUrl();
+    const params = new URLSearchParams();
+    Object.entries(payload).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            params.append(key, String(value));
+        }
+    });
 
-    const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+    const separator = API_URL.includes('?') ? '&' : '?';
+    const response = await fetch(`${API_URL}${separator}${params.toString()}`, {
+        method: 'GET',
     });
 
     const responseText = await response.text();
