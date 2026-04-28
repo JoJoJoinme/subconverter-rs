@@ -85,7 +85,7 @@ pub fn explode(link: &str, node: &mut Proxy) -> bool {
 /// proxy links) and returns a vector of Proxy objects
 pub fn explode_sub(sub: &str, nodes: &mut Vec<Proxy>) -> bool {
     // Trim the subscription content
-    let sub = sub.trim();
+    let sub = strip_appended_php_diagnostics(sub);
 
     // Check for empty subscription
     if sub.is_empty() {
@@ -176,7 +176,7 @@ pub fn explode_sub(sub: &str, nodes: &mut Vec<Proxy>) -> bool {
 /// Number of nodes successfully parsed, or 0 if parsing failed
 pub fn explode_conf_content(content: &str, nodes: &mut Vec<Proxy>) -> i32 {
     // Trim the content
-    let content = content.trim();
+    let content = strip_appended_php_diagnostics(content);
 
     // Check for empty content
     if content.is_empty() {
@@ -244,5 +244,85 @@ pub fn explode_conf_content(content: &str, nodes: &mut Vec<Proxy>) -> i32 {
         (nodes.len() - orig_size) as i32
     } else {
         0
+    }
+}
+
+fn strip_appended_php_diagnostics(content: &str) -> &str {
+    let content = content.trim();
+    let markers = [
+        "<b>Warning</b>",
+        "<b>Notice</b>",
+        "<b>Deprecated</b>",
+        "<b>Fatal error</b>",
+        "<b>Parse error</b>",
+    ];
+
+    let Some(diagnostic_pos) = markers
+        .iter()
+        .filter_map(|marker| content.find(marker))
+        .min()
+    else {
+        return content;
+    };
+
+    trim_trailing_html_breaks(&content[..diagnostic_pos])
+}
+
+fn trim_trailing_html_breaks(mut content: &str) -> &str {
+    loop {
+        let trimmed = content.trim_end();
+        if let Some(stripped) = trimmed
+            .strip_suffix("<br />")
+            .or_else(|| trimmed.strip_suffix("<br/>"))
+            .or_else(|| trimmed.strip_suffix("<br>"))
+        {
+            content = stripped;
+        } else {
+            return trimmed;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::ProxyType;
+    use crate::utils::base64::url_safe_base64_encode;
+    use base64::{engine::general_purpose::STANDARD, Engine};
+
+    fn sample_ssr_link() -> String {
+        let password = STANDARD.encode("test");
+        let remarks = STANDARD.encode("Test SSR");
+        let group = STANDARD.encode("Test Group");
+        let body = format!(
+            "example.com:8388:auth_aes128_md5:aes-256-cfb:tls1.2_ticket_auth:{}/?remarks={}&group={}",
+            password, remarks, group
+        );
+
+        format!("ssr://{}", url_safe_base64_encode(&body))
+    }
+
+    #[test]
+    fn parses_subscription_with_appended_php_warning() {
+        let subscription = url_safe_base64_encode(&sample_ssr_link());
+        let noisy_subscription = format!(
+            "{}<br />\n<b>Warning</b>: Division by zero in <b>/path/link.php</b> on line <b>639</b><br />",
+            subscription
+        );
+        let mut nodes = Vec::new();
+
+        let parsed = explode_conf_content(&noisy_subscription, &mut nodes);
+
+        assert_eq!(parsed, 1);
+        assert_eq!(nodes[0].proxy_type, ProxyType::ShadowsocksR);
+        assert_eq!(nodes[0].remark, "Test SSR");
+    }
+
+    #[test]
+    fn leaves_content_without_php_warning_unchanged() {
+        assert_eq!(
+            strip_appended_php_diagnostics("  ssr://example  "),
+            "ssr://example"
+        );
     }
 }
