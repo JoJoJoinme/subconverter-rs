@@ -21,15 +21,13 @@ export function dummy() {
 // --- KV Storage ---
 
 async function getKv() {
-    if (!globalThis.SUB_KV) {
-        throw new Error("SUB_KV not set in globalThis. Make sure to set it in the worker fetch handler.");
-    }
-    return globalThis.SUB_KV;
+    return globalThis.SUB_KV || null;
 }
 
 export async function kv_get(key) {
     try {
         const kv = await getKv();
+        if (!kv) return null;
         const value = await kv.get(key, { type: 'arrayBuffer' });
         return value ? new Uint8Array(value) : null;
     } catch (error) {
@@ -41,6 +39,7 @@ export async function kv_get(key) {
 export async function kv_get_text(key) {
     try {
         const kv = await getKv();
+        if (!kv) return undefined;
         const value = await kv.get(key, { type: 'text' });
         return value === null ? undefined : value;
     } catch (error) {
@@ -52,6 +51,7 @@ export async function kv_get_text(key) {
 export async function kv_set(key, value) {
     try {
         const kv = await getKv();
+        if (!kv) return;
         // value is Uint8Array
         await kv.put(key, value);
     } catch (error) {
@@ -63,6 +63,7 @@ export async function kv_set(key, value) {
 export async function kv_set_text(key, value) {
     try {
         const kv = await getKv();
+        if (!kv) return;
         // value is string
         await kv.put(key, value);
     } catch (error) {
@@ -74,6 +75,7 @@ export async function kv_set_text(key, value) {
 export async function kv_exists(key) {
     try {
         const kv = await getKv();
+        if (!kv) return 0;
         // Cloudflare KV doesn't have exists, use list with limit 1
         const list = await kv.list({ prefix: key, limit: 1 });
         // Check if we found the key exactly
@@ -90,6 +92,7 @@ export async function kv_exists(key) {
 export async function kv_list(prefix) {
     try {
         const kv = await getKv();
+        if (!kv) return [];
         const list = await kv.list({ prefix: prefix });
         return list.keys.map(k => k.name);
     } catch (error) {
@@ -101,6 +104,7 @@ export async function kv_list(prefix) {
 export async function kv_del(key) {
     try {
         const kv = await getKv();
+        if (!kv) return;
         await kv.delete(key);
     } catch (error) {
         console.error(`KV del error for ${key}:`, error);

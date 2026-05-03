@@ -37,16 +37,7 @@ Required repository secrets:
 
 2.  **Configure Wrangler:**
 
-    Edit `cloudflare/wrangler.toml` to set your KV namespace ID.
-    ```toml
-    [[kv_namespaces]]
-    binding = "KV"
-    id = "YOUR_KV_NAMESPACE_ID"
-    ```
-    You can create a KV namespace with:
-    ```bash
-    wrangler kv:namespace create SUB_KV
-    ```
+    `cloudflare/wrangler.toml` is ready to deploy without a KV namespace. The worker falls back to GitHub/static resources when KV is not bound.
 
 3.  **Deploy to Cloudflare:**
 

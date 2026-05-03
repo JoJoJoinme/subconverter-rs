@@ -34,7 +34,7 @@ export default {
 
             // Set global environment for the WASM bindings
             globalThis.SUB_ENV = env;
-            globalThis.SUB_KV = env.KV;
+            globalThis.SUB_KV = env.KV || null;
 
             const url = new URL(request.url);
 
