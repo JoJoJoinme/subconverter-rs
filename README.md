@@ -52,6 +52,7 @@ https://subconverter-rs.netlify.app/
 - Customizable templates and rule sets
 - HTTP server with RESTful API endpoints
 - Compatible with original subconverter configuration
+- Serverless deployment on Cloudflare Workers
 
 ---
 
@@ -128,6 +129,79 @@ cd subconverter-rs
 cargo build --release --features=web-api
 ```
 The binary will be available at `target/release/subconverter-rs`.
+
+### Cloudflare Workers
+
+See the [Deploy to Cloudflare Workers](#-deploy-to-cloudflare-workers) section below.
+
+---
+
+## ☁️ Deploy to Cloudflare Workers
+
+subconverter-rs can be deployed to Cloudflare Workers for a serverless experience.
+
+### Prerequisites
+
+- [Rust & Cargo](https://www.rust-lang.org/tools/install)
+- [Node.js](https://nodejs.org/) (for Wrangler)
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (`npm install -g wrangler`)
+- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+
+### Build and Deploy
+
+You can deploy using either the pre-compiled release or by building from source.
+
+#### Option 1: Use Pre-compiled Release (Recommended)
+
+1.  Download `subconverter-cloudflare-vX.Y.Z.zip` from the [Releases page](https://github.com/lonelam/subconverter-rs/releases).
+2.  Unzip the archive.
+3.  Proceed to **Configure Wrangler** below.
+
+#### Option 2: Build from Source
+
+1.  From the root of the repository, run:
+    ```bash
+    ./scripts/build-cloudflare.sh
+    ```
+    This script compiles the Rust code into WebAssembly with the `cloudflare` feature enabled.
+2.  Navigate to the `cloudflare` directory:
+    ```bash
+    cd cloudflare
+    ```
+
+### Configure Wrangler
+
+1.  Edit `wrangler.toml` (in the unzipped folder or `cloudflare/` directory) to set your KV namespace ID.
+    ```toml
+    [[kv_namespaces]]
+    binding = "KV"
+    id = "YOUR_KV_NAMESPACE_ID"
+    ```
+    You can create a KV namespace with:
+    ```bash
+    wrangler kv:namespace create SUB_KV
+    ```
+
+### Deploy to Cloudflare
+
+Run the deployment command:
+```bash
+wrangler deploy
+```
+
+For more details, see [cloudflare/README.md](cloudflare/README.md).
+
+### Automatic Deployment via GitHub Actions
+
+You can automatically deploy to Cloudflare Workers using the provided GitHub Actions workflow.
+
+1.  Fork this repository.
+2.  Go to **Settings** -> **Secrets and variables** -> **Actions**.
+3.  Add the following secrets:
+    *   `CLOUDFLARE_API_TOKEN`: Your Cloudflare API Token (Template: Edit Cloudflare Workers).
+    *   `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID (found in the dashboard URL or sidebar).
+4.  Edit `cloudflare/wrangler.toml` in your forked repo and update the `id` field under `[[kv_namespaces]]` with your own KV Namespace ID (this ID is not sensitive and can be committed).
+5.  Push to the `main` branch or manually trigger the "Deploy to Cloudflare Workers" workflow.
 
 ---
 
@@ -328,6 +402,28 @@ Set these repository secrets before enabling deployment:
 4.  **Add tests**: Increase test coverage to ensure stability.
 5.  **Documentation**: Improve docs or add examples to help others use the project.
 6.  **Performance optimizations**: Help make the converter even faster.
+
+---
+
+## 🧪 Testing
+
+### Unit Tests
+
+Run the test suite using Cargo:
+
+```bash
+cargo test
+```
+
+This will run all unit tests defined in the source code, verifying parsing logic and other components.
+
+### Binary Verification
+
+You can verify the binary functionality by running a local conversion:
+
+```bash
+cargo run -- --url "ss://YWVzLTEyOC1nY206dGVzdA==@192.168.100.1:8888#Example1" --output sub.yaml
+```
 
 ---
 

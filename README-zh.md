@@ -58,6 +58,10 @@ cargo build --release --features=web-api
 ```
 二进制文件将位于 `target/release/subconverter-rs`。
 
+### Cloudflare Workers
+
+详见下文 [部署到 Cloudflare Workers](#-部署到-cloudflare-workers) 章节。
+
 ---
 
 ## ✅ 兼容性校验（与原版对齐）
@@ -175,6 +179,7 @@ python3 scripts/run_parity_suite.py --strict
 | 模板系统 | ✅ | 支持可自定义模板 |
 | 规则转换 | ✅ | 规则集合转换功能（部分实现） |
 | HTTP 服务器 | ✅ | 用于订阅转换的 Web 服务器，实现核心sub接口 |
+| Cloudflare Workers 支持 | ✅ | 支持部署到 Cloudflare Workers 无服务器环境 |
 | 额外 API 端点 | ⚠️ | 如 /surge2clash, /getprofile 等（部分实现） |
 | 自动上传到 Gist | ❌ | 自动上传生成的配置（计划中） |
 | RESTful API | ❌ | 用于集成的完整 API（部分实现） |
@@ -280,6 +285,99 @@ http://127.0.0.1:25500/surge2clash?link=Surge的订阅链接
 ```
 
 此处 `Surge的订阅链接`**不需要进行URLEncode**，且**无需任何额外配置**。
+
+* * *
+
+## ☁️ 部署到 Cloudflare Workers
+
+subconverter-rs 可以部署到 Cloudflare Workers，提供无服务器的转换服务。
+
+### 准备工作
+
+- [Rust & Cargo](https://www.rust-lang.org/tools/install) (如果选择从源码编译)
+- [Node.js](https://nodejs.org/) (用于 Wrangler)
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (`npm install -g wrangler`)
+
+### 构建与部署
+
+您可以选择使用预编译版本（推荐）或从源码编译。
+
+#### 选项 1: 使用预编译版本 (推荐)
+
+1.  从 [Releases 页面](https://github.com/lonelam/subconverter-rs/releases) 下载 `subconverter-cloudflare-vX.Y.Z.zip`。
+2.  解压文件。
+3.  直接进行下方的 **配置 Wrangler** 步骤。
+
+#### 选项 2: 从源码编译
+
+1.  在项目根目录运行:
+    ```bash
+    ./scripts/build-cloudflare.sh
+    ```
+    此脚本会将 Rust 代码编译为启用了 `cloudflare` 特性的 WebAssembly 模块。
+2.  进入 `cloudflare` 目录:
+    ```bash
+    cd cloudflare
+    ```
+
+### 配置 Wrangler
+
+1.  编辑 `wrangler.toml` (位于解压后的目录或 `cloudflare/` 目录中)，设置您的 KV 命名空间 ID。
+    ```toml
+    [[kv_namespaces]]
+    binding = "KV"
+    id = "YOUR_KV_NAMESPACE_ID"
+    ```
+    您可以使用以下命令创建一个 KV 命名空间：
+    ```bash
+    wrangler kv:namespace create SUB_KV
+    ```
+    **注意：** 您问到的 "cloudflare key" 通常是指 Wrangler 的认证信息。在首次运行 `wrangler deploy` 时，Wrangler 会弹出一个浏览器窗口让您登录 Cloudflare 授权。或者您可以设置 `CLOUDFLARE_API_TOKEN` 环境变量。具体的 `KV` ID 是用于存储缓存数据的，需要在您的 Cloudflare Dashboard 或通过上面的命令行创建。
+
+### 部署到 Cloudflare
+
+运行部署命令：
+```bash
+wrangler deploy
+```
+
+更多详情请参考 [cloudflare/README.md](cloudflare/README.md)。
+
+### 通过 GitHub Actions 自动部署
+
+您可以使用提供的 GitHub Actions 工作流自动部署到 Cloudflare Workers。
+
+1.  Fork 本仓库。
+2.  进入 **Settings** (设置) -> **Secrets and variables** (密钥与变量) -> **Actions**。
+3.  添加以下密钥 (Secrets):
+    *   `CLOUDFLARE_API_TOKEN`: 您的 Cloudflare API Token (使用 "Edit Cloudflare Workers" 模板)。
+    *   `CLOUDFLARE_ACCOUNT_ID`: 您的 Cloudflare Account ID (可在仪表盘 URL 或侧边栏中找到)。
+4.  编辑您 fork 仓库中的 `cloudflare/wrangler.toml`，更新 `[[kv_namespaces]]` 下的 `id` 字段为您自己的 KV 命名空间 ID (此 ID 不敏感，可提交到仓库)。
+5.  推送到 `main` 分支或手动触发 "Deploy to Cloudflare Workers" 工作流。
+
+详细的验证步骤请参考 [验证部署指南](docs/VERIFY_DEPLOY.md)。
+
+* * *
+
+## 🧪 测试
+
+### 单元测试
+
+使用 Cargo 运行测试套件：
+
+```bash
+cargo test
+```
+
+这将运行源代码中定义的所有单元测试，验证解析逻辑和其他组件。
+
+### 二进制验证
+
+您可以通过运行本地转换来验证二进制文件的功能：
+
+```bash
+cargo run -- --url "ss://YWVzLTEyOC1nY206dGVzdA==@192.168.100.1:8888#Example1" --output sub.yaml
+```
 
 * * *
 
